@@ -1,0 +1,34 @@
+# LiTS data config — Liver Cancer AI (W1)
+# DATA_ROOT có thể override bằng env var DATA_ROOT (portable Kaggle/Colab/FPT)
+dataset:
+  name: lits
+  version: v1
+  data_root: /kaggle/input/liver-tumor-segmentation
+  volume_glob: "**/volume-*.nii*"
+  seg_glob: "**/segmentation-*.nii*"
+
+preprocess:
+  window: { wl: 50, ww: 350 }   # cửa sổ gan → clip [-125, 225] HU
+  size: 256
+  liver_crop: true              # crop quanh bbox gan (đã chốt)
+  crop_margin: 16               # px margin quanh bbox gan
+  resample_spacing: null        # null = tắt (mặc định, để nhanh)
+  cache_dtype: uint8            # 1 kênh; nở 3ch + normalize lúc train
+
+label_transfer:
+  # NGƯỠNG TẠM — CHỐT lại sau khi xem histogram trong data audit
+  tau_area: 10                  # tumor_area >= tau_area (px) → positive
+  tau_liver: 50                 # liver_area >= tau_liver (px) → slice có gan
+  liver_label: 1
+  tumor_label: 2
+
+split:
+  seed: 42
+  k_folds: 5
+  test_frac: 0.15               # hold-out internal test ở mức bệnh nhân
+
+paths:
+  cache_dir: processed_cache
+  manifest: manifest.csv
+  split: splits/lits_v1.json
+  audit_report: reports/data_audit_report.md

@@ -1,0 +1,9 @@
+# W1 data pipeline (Kaggle/Colab đã có sẵn phần lớn; cài bổ sung nếu thiếu)
+nibabel>=5.0
+numpy
+pandas
+scikit-learn>=1.0
+opencv-python-headless
+matplotlib
+pyyaml
+pytest

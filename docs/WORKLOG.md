@@ -13,6 +13,12 @@
 
 ---
 
+## [2026-07-21 · Claude Code]
+- **Done:** Scaffold pipeline data W1 (Bước 0). Tạo `configs/data/lits.yaml`, `src/data/{io,preprocess,label_transfer,audit}.py`, `scripts/{build_manifest,make_split}.py`, `tests/test_leakage.py`, `notebooks/01_data_kaggle.ipynb`, `DATA_CARD.md`, `requirements.txt`. Đã test logic split+leakage (synthetic → PASS); syntax/JSON/YAML hợp lệ.
+- **Decisions:** Dùng dataset Kaggle có sẵn `andrewmvd/liver-tumor-segmentation` (bỏ tải CodaLab). Chốt: 256px · liver-crop ON · cache uint8 1-kênh · τ tạm 10/50 (chốt sau audit) · bỏ 70 vol test.
+- **Next (Bước 1→7):** Bạn tạo Kaggle token + notebook → Add Data → chạy `notebooks/01_data_kaggle.ipynb` (verify → manifest → audit chốt τ → split → leakage) → tạo dataset `lits-processed` → tải manifest/split/DATA_CARD về commit.
+- **Files:** configs/, src/data/, scripts/, tests/, notebooks/01_data_kaggle.ipynb, DATA_CARD.md, requirements.txt
+
 ## [2026-07-20 · Claude Code]
 - **Done:** Thiết lập hệ shared-context đa công cụ: tạo `AGENTS.md` (canonical), `CLAUDE.md` (@import), `docs/WORKLOG.md`, `.gitignore`, rules cho Cursor/Antigravity; commit đầu tiên vào git.
 - **Decisions:** Chọn `AGENTS.md` làm nguồn context chung (chuẩn xuyên tool); nguồn sự thật = file đã commit, không dùng bộ nhớ riêng của tool.
