@@ -1,0 +1,17 @@
+---
+description: Liver Cancer AI — project context anchor
+alwaysApply: true
+---
+
+# Đọc context trước khi làm
+
+Nguồn context chung của dự án nằm ở **`AGENTS.md`** (root) — Cursor tự đọc, nhưng luôn tuân theo nó.
+
+Trước khi đề xuất code hoặc quyết định:
+1. Đọc `AGENTS.md` (scope + "Quyết định đã KHÓA" + conventions bắt buộc).
+2. Đọc **phần cuối** `docs/WORKLOG.md` để nắm việc tool trước vừa làm.
+3. Chốt kỹ thuật chi tiết: `report/T3_W1_Spec_Sheet.md`.
+
+Không đọc lại toàn bộ repo — dùng Index trong `AGENTS.md` để nạp đúng doc cần (tiết kiệm token).
+
+Kết thúc phiên: thêm entry lên đầu `docs/WORKLOG.md` + git commit (theo quy ước trong AGENTS.md).

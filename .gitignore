@@ -1,0 +1,49 @@
+# === Dữ liệu y tế thô (KHÔNG commit) ===
+data/raw/
+data/interim/
+data/processed_cache/
+*.nii
+*.nii.gz
+*.dcm
+*.mhd
+*.raw
+*.vtk
+
+# === Artifacts huấn luyện / output ===
+checkpoints/
+outputs/
+mlruns/
+wandb/
+*.ckpt
+*.pth
+*.onnx
+lightning_logs/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# === Cache riêng của công cụ AI (không phải nguồn sự thật) ===
+.claude/
+.impeccable/
+.cursor/cache/
+.antigravity/
+memory-bank/
+# ghi chú: CLAUDE.md (root) VẪN được track; chỉ bỏ qua thư mục .claude/ (skills, settings, projects)
+
+# === OS / IDE ===
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# === GIỮ TRACK (không ignore) ===
+# AGENTS.md, CLAUDE.md, docs/, report/, configs/, src/, .cursor/rules/, .agents/rules/

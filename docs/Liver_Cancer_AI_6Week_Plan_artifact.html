@@ -1,0 +1,656 @@
+<title>Kế hoạch 6 tuần · AI phát hiện ung thư gan trên CT</title>
+<style>
+  :root {
+    --bg: #f2f6f6; --surface: #ffffff; --surface-2: #e9f1f1;
+    --ink: #13232a; --ink-soft: #3c515a; --muted: #647a81; --line: #d6e1e1; --line-strong: #bccccd;
+    --primary: #0d7d84; --primary-ink: #096064; --primary-soft: #dfeeee;
+    --amber: #9c611a; --amber-soft: #f4ead7; --red: #ad3048; --red-soft: #f7e4e8;
+    --green: #237a52; --green-soft: #d9eee2;
+    --hero-bg: #0b2529; --hero-ink: #eef6f5; --hero-soft: #9fd0cf; --hero-line: rgba(159,208,207,.26);
+    --shadow: 0 1px 2px rgba(16,38,46,.05); --shadow-lift: 0 12px 34px rgba(11,37,41,.12);
+    --radius: 14px; --content: 1180px;
+    --font-display: "Charter", "Bitstream Charter", "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", "Liberation Sans", Arial, sans-serif;
+    --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "JetBrains Mono", "Segoe UI Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c1417; --surface: #121e22; --surface-2: #172830;
+      --ink: #e7eff1; --ink-soft: #b7c7cc; --muted: #8299a1; --line: #253840; --line-strong: #34484f;
+      --primary: #34b6b2; --primary-ink: #7fd8d3; --primary-soft: #10302e;
+      --amber: #e0a24a; --amber-soft: #2c2411; --red: #e5677f; --red-soft: #331920;
+      --green: #5cbb8c; --green-soft: #123024;
+      --shadow: 0 1px 2px rgba(0,0,0,.4); --shadow-lift: 0 14px 36px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f2f6f6; --surface: #ffffff; --surface-2: #e9f1f1;
+    --ink: #13232a; --ink-soft: #3c515a; --muted: #647a81; --line: #d6e1e1; --line-strong: #bccccd;
+    --primary: #0d7d84; --primary-ink: #096064; --primary-soft: #dfeeee;
+    --amber: #9c611a; --amber-soft: #f4ead7; --red: #ad3048; --red-soft: #f7e4e8;
+    --green: #237a52; --green-soft: #d9eee2;
+    --shadow: 0 1px 2px rgba(16,38,46,.05); --shadow-lift: 0 12px 34px rgba(11,37,41,.12);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1417; --surface: #121e22; --surface-2: #172830;
+    --ink: #e7eff1; --ink-soft: #b7c7cc; --muted: #8299a1; --line: #253840; --line-strong: #34484f;
+    --primary: #34b6b2; --primary-ink: #7fd8d3; --primary-soft: #10302e;
+    --amber: #e0a24a; --amber-soft: #2c2411; --red: #e5677f; --red-soft: #331920;
+    --green: #5cbb8c; --green-soft: #123024;
+    --shadow: 0 1px 2px rgba(0,0,0,.4); --shadow-lift: 0 14px 36px rgba(0,0,0,.5);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font-sans); font-size: 16.5px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  a { color: var(--primary-ink); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:hover { color: var(--primary); }
+  h1, h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: -.02em; line-height: 1.1; text-wrap: balance; }
+  h3, h4 { font-family: var(--font-sans); font-weight: 650; line-height: 1.28; text-wrap: balance; }
+  ::selection { background: var(--primary); color: #fff; }
+  .progress { position: fixed; z-index: 40; top: 0; left: 0; height: 2px; width: 100%; background: var(--primary); transform: scaleX(0); transform-origin: 0 50%; transition: transform .12s linear; }
+  .topbar {
+    position: sticky; top: 0; z-index: 30; height: 54px; display: flex;
+    align-items: center; justify-content: space-between;
+    padding: 0 max(20px, calc((100vw - var(--content)) / 2));
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    border-bottom: 1px solid var(--line); backdrop-filter: blur(12px) saturate(1.3);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 13.5px; letter-spacing: .003em; color: var(--ink); }
+  .brand .mk { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 8px; background: var(--primary); color: #fff; font-size: 14px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+  .themed { border: 1px solid var(--line-strong); background: transparent; color: var(--ink-soft); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 12.5px; font-weight: 550; cursor: pointer; transition: border-color .18s ease, color .18s ease, background .18s ease; }
+  .themed:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+  .hero { position: relative; background: var(--hero-bg); color: var(--hero-ink); padding: 64px max(20px, calc((100vw - var(--content)) / 2)) 58px; }
+  .hero::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--hero-line); }
+  .eyebrow { margin: 0 0 15px; font-family: var(--font-mono); font-size: 11.5px; font-weight: 550; letter-spacing: .17em; text-transform: uppercase; color: var(--primary-ink); }
+  .hero .eyebrow { color: var(--hero-soft); }
+  .hero h1 { margin: 0; font-size: clamp(33px, 5.2vw, 56px); letter-spacing: -.028em; line-height: 1.04; max-width: 19ch; color: #fff; }
+  .hero p.sub { max-width: 66ch; margin: 22px 0 28px; font-family: var(--font-sans); font-size: clamp(16px, 1.65vw, 19.5px); line-height: 1.56; color: color-mix(in srgb, var(--hero-ink) 86%, transparent); }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tags span { padding: 5px 12px; border: 1px solid var(--hero-line); border-radius: 100px; background: rgba(255,255,255,.045); font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .01em; color: color-mix(in srgb, var(--hero-ink) 84%, transparent); }
+  .tags span.p { border-color: transparent; color: #06312f; background: var(--hero-soft); font-weight: 600; }
+  .metabar { display: grid; grid-template-columns: repeat(5, 1fr); max-width: var(--content); margin: 0 auto; padding: 0 max(20px, calc((100vw - var(--content)) / 2)); background: var(--surface); border-bottom: 1px solid var(--line); }
+  .metabar > div { padding: 17px 20px; }
+  .metabar > div + div { border-left: 1px solid var(--line); }
+  .metabar .k { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .metabar .v { margin-top: 5px; font-weight: 650; font-size: 14px; color: var(--ink); line-height: 1.35; }
+  .layout { display: grid; grid-template-columns: 224px minmax(0,1fr); gap: 46px; max-width: var(--content); margin: 8px auto 0; padding: 0 max(20px, calc((100vw - var(--content)) / 2)) 80px; }
+  .toc { position: sticky; top: 74px; align-self: start; padding: 6px 0; }
+  .toc p { margin: 0 0 10px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .toc a { display: block; padding: 5px 0 5px 13px; border-left: 2px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.35; text-decoration: none; transition: color .16s ease, border-color .16s ease; }
+  .toc a:hover, .toc a.active { border-color: var(--primary); color: var(--primary-ink); }
+  main { min-width: 0; }
+  .sec { padding: 54px 0 8px; border-top: 1px solid var(--line); scroll-margin-top: 66px; }
+  .sec:first-child { border-top: 0; padding-top: 32px; }
+  .sec > .eyebrow { display: flex; align-items: center; gap: 10px; }
+  .sec > .eyebrow .num { display: inline-grid; place-items: center; min-width: 24px; height: 20px; padding: 0 6px; border-radius: 5px; background: var(--primary-soft); color: var(--primary-ink); border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent); font-size: 11px; letter-spacing: .04em; }
+  .sec h2 { margin: 0 0 16px; font-size: clamp(23px, 2.6vw, 32px); letter-spacing: -.02em; }
+  .sec h3 { margin: 30px 0 11px; font-size: 17.5px; color: var(--ink); }
+  .sec p { margin: 0 0 14px; max-width: 74ch; }
+  .lead { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 70ch; }
+  ul, ol { margin: 9px 0 14px; padding-left: 22px; }
+  li { margin: 6px 0; }
+  code { font-family: var(--font-mono); font-size: 13px; background: var(--surface-2); padding: 1.5px 6px; border-radius: 5px; border: 1px solid var(--line); }
+  pre { margin: 18px 0; padding: 17px 19px; overflow-x: auto; border: 1px solid #17383c; border-radius: 12px; background: #0d2226; box-shadow: var(--shadow); }
+  pre code { background: none; border: 0; padding: 0; font-size: 12.5px; line-height: 1.62; color: #dcebe9; }
+  .grid { display: grid; gap: 16px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .card { padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); transition: border-color .18s ease, box-shadow .18s ease; }
+  .card:hover { border-color: var(--line-strong); box-shadow: var(--shadow-lift); }
+  .card.t { border-color: color-mix(in srgb, var(--primary) 30%, var(--line)); }
+  .card.t h4 { color: var(--primary-ink); }
+  .card.g { background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 26%, var(--line)); }
+  .card.g h4 { color: var(--green); }
+  .card.a { background: var(--amber-soft); border-color: color-mix(in srgb, var(--amber) 26%, var(--line)); }
+  .card.a h4 { color: var(--amber); }
+  .card.r { background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 26%, var(--line)); }
+  .card.r h4 { color: var(--red); }
+  .card h4 { margin: 0 0 7px; font-size: 15px; }
+  .card p:last-child, .card ul:last-child, .card ol:last-child { margin-bottom: 0; }
+  .metric { padding: 13px 0 0; border-top: 2px solid var(--primary); }
+  .metric .n { display: block; font-family: var(--font-mono); font-size: 33px; font-weight: 700; letter-spacing: -.03em; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1; }
+  .metric .l { display: block; margin-top: 8px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .callout { margin: 18px 0; padding: 16px 18px; border: 1px solid color-mix(in srgb, var(--primary) 32%, var(--line)); border-radius: 12px; background: var(--primary-soft); }
+  .callout.a { border-color: color-mix(in srgb, var(--amber) 34%, var(--line)); background: var(--amber-soft); }
+  .callout.r { border-color: color-mix(in srgb, var(--red) 34%, var(--line)); background: var(--red-soft); }
+  .callout p { max-width: none; }
+  .callout strong { color: var(--primary-ink); }
+  .callout.a strong { color: var(--amber); }
+  .callout.r strong { color: var(--red); }
+  .badge { display: inline-block; padding: 2.5px 9px; border-radius: 100px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .badge.t { color: var(--primary-ink); background: var(--primary-soft); }
+  .badge.a { color: var(--amber); background: var(--amber-soft); }
+  .badge.r { color: var(--red); background: var(--red-soft); }
+  .badge.g { color: var(--green); background: var(--green-soft); }
+  .tw { overflow-x: auto; margin: 18px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { padding: 11px 15px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th { background: var(--surface-2); color: var(--ink-soft); font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+  tbody td:first-child { font-weight: 550; color: var(--ink); }
+  tbody tr { transition: background .14s ease; }
+  tbody tr:hover td { background: color-mix(in srgb, var(--primary-soft) 55%, transparent); }
+  tbody tr:last-child td, tr:last-child td { border-bottom: 0; }
+  td.c, th.c { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mermaid { margin: 20px 0; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow-x: auto; text-align: center; }
+  .weeks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 18px 0; }
+  .wk { padding: 15px 15px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); transition: border-color .18s ease, box-shadow .18s ease; }
+  .wk:hover { border-color: var(--line-strong); box-shadow: var(--shadow-lift); }
+  .wk .t { display: inline-block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; color: var(--primary-ink); font-weight: 600; padding: 2px 7px; border-radius: 5px; background: var(--primary-soft); }
+  .wk h4 { margin: 9px 0 5px; font-size: 14px; }
+  .wk p { margin: 0; font-size: 12px; color: var(--ink-soft); line-height: 1.48; }
+  .foot { max-width: var(--content); margin: 0 auto; padding: 44px max(20px, calc((100vw - var(--content)) / 2)) 52px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); }
+  .foot .dis { padding: 15px 17px; border: 1px solid color-mix(in srgb, var(--red) 40%, var(--line)); border-radius: 12px; background: var(--red-soft); color: var(--ink-soft); }
+  .foot .dis strong { color: var(--red); }
+  .totop { position: fixed; right: 22px; bottom: 22px; z-index: 20; width: 42px; height: 42px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--primary); color: #fff; box-shadow: var(--shadow-lift); cursor: pointer; opacity: 0; transform: translateY(8px); transition: opacity .2s ease, transform .2s ease; }
+  .totop.on { opacity: 1; transform: translateY(0); }
+  body.js .sec { opacity: 0; transform: translateY(16px); transition: opacity .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1); }
+  body.js .sec.in { opacity: 1; transform: none; }
+  @media (max-width: 940px) {
+    .metabar { grid-template-columns: repeat(2, 1fr); }
+    .metabar > div + div { border-left: 0; }
+    .metabar > div { border-top: 1px solid var(--line); }
+    .metabar > div:first-child, .metabar > div:nth-child(2) { border-top: 0; }
+    .layout { grid-template-columns: 1fr; gap: 8px; }
+    .toc { position: static; padding-bottom: 18px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+    .weeks { grid-template-columns: repeat(3, 1fr); }
+    .g4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 620px) {
+    .hero { padding: 44px 20px 40px; }
+    .metabar { grid-template-columns: 1fr; }
+    .metabar > div { border-top: 1px solid var(--line); }
+    .metabar > div:first-child { border-top: 0; }
+    .g2, .g3, .g4 { grid-template-columns: 1fr; }
+    .weeks { grid-template-columns: 1fr 1fr; }
+    .sec { padding-top: 40px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+    body.js .sec { opacity: 1 !important; transform: none !important; }
+  }
+</style>
+
+<div class="progress" id="progress"></div>
+<header class="topbar">
+  <div class="brand"><span class="mk">🩻</span> Liver-CT Detect · Kế hoạch R&amp;D 6 tuần</div>
+  <button class="themed" id="themeBtn" type="button">◐ Giao diện</button>
+</header>
+
+<section class="hero" id="top">
+  <p class="eyebrow">Research plan · 6 tuần · Research-use-only prototype</p>
+  <h1>AI phát hiện tổn thương ung thư gan trên ảnh CT</h1>
+  <p class="sub">Kế hoạch nghiên cứu &amp; phát triển end-to-end: phân loại nhị phân mức lát cắt (có tổn thương gan vs gan bình thường) trên CT, gộp lên mức bệnh nhân, đánh giá bằng Accuracy · Sensitivity · Specificity · AUC, kèm demo Grad-CAM chạy bằng Docker.</p>
+  <div class="tags">
+    <span class="p">CT 2D slice-level</span><span class="p">Patient-level split</span><span>Transfer learning</span><span>Grad-CAM</span><span>Bootstrap 95% CI</span><span>FastAPI + Gradio</span><span>Decision-support · không thay bác sĩ</span>
+  </div>
+</section>
+
+<section class="metabar" aria-label="Thông tin nhanh">
+  <div><div class="k">Thời gian</div><div class="v">6 tuần · 1 kỹ sư + AI agent</div></div>
+  <div><div class="k">Dataset chính</div><div class="v">LiTS (131 bn có mask)</div></div>
+  <div><div class="k">External test</div><div class="v">3D-IRCADb-01 (20 bn)</div></div>
+  <div><div class="k">Metric quyết định</div><div class="v">Patient-level ROC-AUC</div></div>
+  <div><div class="k">Deliverable</div><div class="v">Pipeline · Benchmark · Demo Docker</div></div>
+</section>
+
+<div class="layout">
+  <nav class="toc" aria-label="Mục lục">
+    <p>Mục lục</p>
+    <a href="#summary">01 · Executive summary</a>
+    <a href="#scope">02 · Chọn phạm vi</a>
+    <a href="#problem">03 · Problem statement</a>
+    <a href="#data">04 · Dataset</a>
+    <a href="#io">05 · Input / Output / Labels</a>
+    <a href="#protocol">06 · Data protocol &amp; split</a>
+    <a href="#method">07 · Preprocessing &amp; mô hình</a>
+    <a href="#arch">08 · Kiến trúc hệ thống</a>
+    <a href="#exp">09 · Experiment matrix</a>
+    <a href="#eval">10 · Evaluation protocol</a>
+    <a href="#xai">11 · Explainability &amp; lỗi</a>
+    <a href="#demo">12 · Demo</a>
+    <a href="#timeline">13 · Kế hoạch &amp; milestones</a>
+    <a href="#risk">14 · Rủi ro</a>
+    <a href="#stack">15 · Hạ tầng &amp; stack</a>
+    <a href="#scopebox">16 · Scope chốt &amp; Critical path</a>
+    <a href="#dod">17 · DoD &amp; 48 giờ đầu</a>
+  </nav>
+
+  <main>
+    <section class="sec" id="summary">
+      <p class="eyebrow"><span class="num">01</span> Executive summary</p>
+      <h2>Một pipeline hoàn chỉnh, đúng protocol, tái lập được — hơn một mô hình phức tạp</h2>
+      <p class="lead">Xây dựng pipeline đi từ ảnh CT gan thô đến dự đoán cho bài toán <strong>phân loại nhị phân ở mức lát cắt</strong> — "lát cắt có tổn thương gan (nghi ác) hay gan bình thường" — rồi <strong>gộp lên mức bệnh nhân</strong>. Đây là proxy cho "phát hiện ung thư gan", định vị là công cụ <strong>triage/hỗ trợ</strong>, không thay bác sĩ.</p>
+      <div class="grid g3">
+        <div class="metric"><span class="n">131</span><span class="l">bệnh nhân LiTS có mask cho development &amp; 5-fold CV</span></div>
+        <div class="metric"><span class="n">20</span><span class="l">bệnh nhân 3D-IRCADb-01 làm external test độc lập</span></div>
+        <div class="metric"><span class="n">10+</span><span class="l">thí nghiệm có kiểm soát (E0–E10), mỗi lần đổi 1 yếu tố</span></div>
+      </div>
+      <h3>Vì sao chọn hướng CT 2D slice-level</h3>
+      <div class="grid g2">
+        <div class="card t"><span class="badge t">Khả thi</span><h4>Dữ liệu tải được ngay, phần cứng nhẹ</h4><p>LiTS + IRCADb có mask chuyên gia, ảnh 2D 256–512px hợp GPU khiêm tốn; nhãn slice suy từ mask, đo Sens/Spec/AUC khoa học được.</p></div>
+        <div class="card g"><span class="badge g">Đáng tin</span><h4>Đo thành công không hứa con số</h4><p>Thành công = vượt baseline, ổn định qua fold/seed, báo cáo ROC/PR/CM + 95% CI bootstrap, Grad-CAM kiểm chứng, demo Docker chạy, tài liệu đầy đủ.</p></div>
+      </div>
+      <div class="callout r"><strong>Ranh giới an toàn.</strong> Không phân biệt chắc lành/ác (thiếu nhãn mô bệnh học); không dùng test set để chọn model/threshold; không báo cáo Accuracy đơn lẻ; nêu rõ domain shift &amp; limitations; luôn kèm disclaimer "Research use only".</div>
+    </section>
+    <section class="sec" id="scope">
+      <p class="eyebrow"><span class="num">02</span> Phân tích &amp; lựa chọn phạm vi</p>
+      <h2>Năm hướng khả thi — chấm điểm cho ràng buộc 6 tuần</h2>
+      <p>Thang 1–5 (5 = tốt nhất). Tổng không trọng số để so sánh nhanh; hướng thắng được chọn làm MVP.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Tiêu chí</th><th class="c">A · CT slice</th><th class="c">B · Histo patch</th><th class="c">C · Ultrasound</th><th class="c">D · ROI lành/ác</th><th class="c">E · 3D volume</th></tr></thead>
+        <tbody>
+          <tr><td>Phù hợp "phát hiện/phân loại UT gan"</td><td class="c">4</td><td class="c">5</td><td class="c">3</td><td class="c">5</td><td class="c">4</td></tr>
+          <tr><td>Dữ liệu public tải được ngay</td><td class="c">5</td><td class="c">3</td><td class="c">2</td><td class="c">2</td><td class="c">4</td></tr>
+          <tr><td>Độ khó tiền xử lý (cao = dễ)</td><td class="c">3</td><td class="c">2</td><td class="c">4</td><td class="c">4</td><td class="c">2</td></tr>
+          <tr><td>Yêu cầu phần cứng (cao = nhẹ)</td><td class="c">4</td><td class="c">3</td><td class="c">5</td><td class="c">4</td><td class="c">1</td></tr>
+          <tr><td>Hoàn thành trong 6 tuần</td><td class="c">5</td><td class="c">3</td><td class="c">4</td><td class="c">3</td><td class="c">2</td></tr>
+          <tr><td>Đạt Acc/Sens/Spec/AUC đáng tin</td><td class="c">4</td><td class="c">4</td><td class="c">3</td><td class="c">3</td><td class="c">3</td></tr>
+          <tr><td>Demo trực quan</td><td class="c">5</td><td class="c">4</td><td class="c">4</td><td class="c">3</td><td class="c">3</td></tr>
+          <tr><td>Kiểm soát leakage/đánh giá</td><td class="c">3</td><td class="c">3</td><td class="c">3</td><td class="c">2</td><td class="c">4</td></tr>
+          <tr><td><strong>Tổng</strong></td><td class="c"><strong>33 ✓</strong></td><td class="c">27</td><td class="c">28</td><td class="c">26</td><td class="c">23</td></tr>
+        </tbody>
+      </table></div>
+      <div class="grid g2">
+        <div class="card g"><span class="badge g">Chọn làm MVP</span><h4>A · CT slice-level detection proxy</h4><p>Dữ liệu chắc chắn, phần cứng nhẹ, demo mạnh, có external test độc lập (IRCADb). Segmentation của LiTS <em>chỉ để suy nhãn slice</em>, không phải mục tiêu.</p></div>
+        <div class="card a"><span class="badge a">Dự phòng / để dành</span><h4>B là fallback · D &amp; E bị loại vai trò chính</h4><p>Histopathology (B) đúng "ung thư" nhưng WSI + xin quyền PAIP rủi ro tiến độ. D thiếu nhãn lành/ác tin cậy. E (3D) quá nặng → chỉ stretch.</p></div>
+      </div>
+      <div class="callout a"><strong>Giả định ghi rõ (không hỏi lại):</strong> "Phát hiện ung thư gan" ⇒ phát hiện <strong>tổn thương gan bất thường</strong> (HCC + di căn) vs gan bình thường, mức slice → gộp patient. Ảnh nền là CT bụng. Training chính chạy cloud GPU 16GB; fallback 256px + ResNet-18 nếu chỉ có GPU 4GB.</div>
+    </section>
+
+    <section class="sec" id="problem">
+      <p class="eyebrow"><span class="num">03</span> Problem statement cuối cùng</p>
+      <h2>Đặc tả có thể triển khai ngay</h2>
+      <div class="callout"><p style="margin:0"><strong>"Cho đầu vào là một lát cắt CT bụng chứa gan — hoặc một volume CT để suy dự đoán mức bệnh nhân — mô hình dự đoán <em>xác suất có tổn thương gan bất thường (nghi ác)</em>, tại mức slice (đơn vị chính) và mức patient (gộp từ slice), nhằm hỗ trợ sàng lọc/triage và làm nổi bật vùng cần bác sĩ xem lại; KHÔNG thay quyết định của bác sĩ và KHÔNG phân biệt lành/ác đã kiểm chứng mô bệnh học."</strong></p></div>
+      <div class="grid g4">
+        <div class="card t"><h4>Task</h4><p>Binary classification (multiclass là nice-to-have).</p></div>
+        <div class="card g"><h4>Positive → Sensitivity</h4><p>Slice/bn <strong>có</strong> tổn thương.</p></div>
+        <div class="card g"><h4>Negative → Specificity</h4><p>Slice/bn <strong>gan bình thường</strong>.</p></div>
+        <div class="card a"><h4>Đơn vị</h4><p>Slice (dự đoán) → Patient (báo cáo).</p></div>
+      </div>
+      <div class="callout a"><strong>Chuyển nhãn &amp; hạn chế khoa học:</strong> nhãn slice suy từ mask u LiTS (positive nếu <code>tumor_area ≥ τ_area</code>). Hạn chế: (1) gồm HCC + di căn → "ác tính nói chung"; (2) không có nhãn lành tính → không học được ranh giới lành/ác; (3) slice tương quan trong cùng bn → <strong>bắt buộc patient-level split</strong>, không coi mỗi slice là mẫu độc lập; (4) tổn thương nhỏ/isoattenuating có thể bị mask bỏ sót → nhãn nhiễu nhẹ.</div>
+    </section>
+
+    <section class="sec" id="data">
+      <p class="eyebrow"><span class="num">04</span> Dataset public</p>
+      <h2>Ba nguồn — một chính, một mirror, một external</h2>
+      <p>Số liệu tham chiếu từ mô tả benchmark; mục đánh dấu <span class="badge a">⚠ verify</span> cần đối chiếu trang nguồn khi tải. Không bịa tên/URL/số liệu.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Thuộc tính</th><th>LiTS · chính</th><th>3D-IRCADb-01 · external</th><th>MSD Task03 · mirror</th></tr></thead>
+        <tbody>
+          <tr><td>Loại / định dạng</td><td>CT bụng · NIfTI</td><td>CT bụng · DICOM+VTK</td><td>CT bụng · NIfTI</td></tr>
+          <tr><td>Số bệnh nhân</td><td class="c">131 train + 70 test</td><td class="c">20</td><td class="c">= LiTS</td></tr>
+          <tr><td>Nhãn</td><td>Mask gan + u</td><td>Mask gan + mạch + u</td><td>Mask gan + u</td></tr>
+          <tr><td>Vai trò</td><td>Development, 5-fold CV, segmentation→nhãn</td><td>External test (domain shift)</td><td>Mirror tải khi link LiTS lỗi</td></tr>
+          <tr><td>Ưu điểm</td><td>Lớn, đa trung tâm (~7 site), mask chuẩn</td><td>Cohort độc lập, có mask u</td><td>Host thay thế dễ tải</td></tr>
+          <tr><td>Hạn chế / rủi ro</td><td>Không nhãn lành/ác; imbalance slice</td><td>Rất nhỏ → CI rộng</td><td><strong>Trùng LiTS → KHÔNG dùng chung</strong></td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout r"><strong>Cảnh báo leakage:</strong> MSD Task03 = LiTS (cùng data) → tuyệt đối không trộn hai nguồn vào train/test khác nhau. Kiểm tra trùng cơ học (hash volume, số slice, spacing) trước khi coi IRCADb là external. <strong>Không commit ảnh y tế thô</strong> vào repo — chỉ manifest + script tải + checksum SHA-256.</div>
+      <p style="margin-bottom:0;font-size:13.5px;color:var(--muted)">Nguồn: LiTS <a href="https://arxiv.org/abs/1901.04056" target="_blank" rel="noopener">arXiv:1901.04056</a> · IRCADb <a href="https://www.ircad.fr/research/data-sets/liver-segmentation-3d-ircadb-01/" target="_blank" rel="noopener">ircad.fr</a> · MSD <a href="http://medicaldecathlon.com/" target="_blank" rel="noopener">medicaldecathlon.com</a>. Hướng thay thế nếu CT trục trặc: histopathology PAIP 2019 / TCGA-LIHC (đúng "ung thư" hơn nhưng cần tiling + xin quyền).</p>
+    </section>
+
+    <section class="sec" id="io">
+      <p class="eyebrow"><span class="num">05</span> Input · Output · Labels</p>
+      <h2>Đầu vào có cấu trúc, đầu ra kiểm tra được</h2>
+      <div class="grid g2">
+        <div class="card t"><span class="badge t">Input</span><h4>Ảnh &amp; metadata</h4><ul><li>Slice axial 2D đã windowing gan, resize 256/512, grayscale→3 kênh (pretrained).</li><li>Hoặc volume CT (NIfTI/DICOM) → tách slice có gan.</li><li><code>patient_id, slice_index, spacing, thickness, window, has_liver, phase</code>.</li></ul></div>
+        <div class="card t"><span class="badge t">Output</span><h4>Dự đoán &amp; giải thích</h4><ul><li>Slice: <code>p∈[0,1]</code>; nhãn nếu <code>p ≥ threshold</code> (khóa từ val).</li><li>Patient: <code>P_patient = mean(top-k slice-prob)</code> + số slice nghi ngờ.</li><li>Ngưỡng đang dùng, model version, Grad-CAM, disclaimer.</li></ul></div>
+      </div>
+      <h3>Định nghĩa nhãn (label spec)</h3>
+      <pre><code>has_liver(s) = liver_area(s) &gt;= τ_liver          # vd 50 px
+label(s) = 1 (positive)  nếu tumor_area(s) &gt;= τ_area   # vd 10 px
+         = 0 (negative)  nếu has_liver(s) và tumor_area(s) &lt; τ_area
+         = EXCLUDE        nếu not has_liver(s)          # slice không chứa gan</code></pre>
+      <div class="grid g3">
+        <div class="card"><h4>Nhị phân → Sens/Spec</h4><p>Sens=TP/(TP+FN); Spec=TN/(TN+FP); AUC của <code>p</code>.</p></div>
+        <div class="card"><h4>Nhiều tổn thương</h4><p>Chỉ cần ≥1 vùng nghi ngờ ⇒ patient-positive; không đếm số u.</p></div>
+        <div class="card"><h4>Inclusion / Exclusion</h4><p>Gồm slice có gan; loại slice không gan, volume hỏng, mask rỗng; gắn cờ near-duplicate/missing phase.</p></div>
+      </div>
+    </section>
+    <section class="sec" id="protocol">
+      <p class="eyebrow"><span class="num">06</span> Data protocol &amp; split</p>
+      <h2>Chia dữ liệu ở mức bệnh nhân — bất biến chất lượng số 1</h2>
+      <p>Không bao giờ để slice của cùng bệnh nhân rơi vào nhiều tập. Chia theo <code>patient_id</code>, stratify theo nhãn patient. Dataset nhỏ ⇒ <strong>StratifiedGroupKFold (k=5)</strong> + hold-out, báo cáo mean±std &amp; bootstrap 95% CI ở patient-level.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Tập</th><th class="c">Tỷ lệ</th><th class="c">Số bn (≈)</th><th>Mục đích</th></tr></thead>
+        <tbody>
+          <tr><td>Train</td><td class="c">70%</td><td class="c">~92</td><td>Học tham số</td></tr>
+          <tr><td>Validation</td><td class="c">15%</td><td class="c">~20</td><td>Chọn model, tune threshold, early stopping</td></tr>
+          <tr><td>Internal test</td><td class="c">15%</td><td class="c">~19</td><td>Đánh giá cuối — <strong>chỉ chạm 1 lần</strong></td></tr>
+          <tr><td>External test</td><td class="c">100% IRCADb</td><td class="c">20</td><td>Generalization / domain shift — hold-out hoàn toàn</td></tr>
+        </tbody>
+      </table></div>
+      <pre><code>from sklearn.model_selection import StratifiedGroupKFold, train_test_split
+pat = df.groupby("patient_id")["slice_label"].max().reset_index()   # nhãn bn
+tv_ids, test_ids = train_test_split(pat.patient_id, test_size=.15,
+                                    stratify=pat.y, random_state=42)
+sgkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=42)
+# fold theo BỆNH NHÂN, stratify theo y
+assert set(test_ids).isdisjoint(tv_ids)     # unit test: đĩa giao = ∅ (chạy trong CI)</code></pre>
+      <div class="callout"><strong>Assertion leakage bắt buộc:</strong> với mọi cặp tập, <code>patient_ids_A ∩ patient_ids_B = ∅</code>. Test này chạy trong CI. Mỗi dataset version gắn manifest hash + <code>τ_area/τ_liver</code> + preprocessing config để tái lập.</div>
+    </section>
+
+    <section class="sec" id="method">
+      <p class="eyebrow"><span class="num">07</span> Preprocessing, augmentation &amp; mô hình</p>
+      <h2>Kiểm soát dữ liệu trước, tăng độ phức tạp mô hình sau</h2>
+      <h3>Preprocessing CT (bắt buộc vs tùy chọn)</h3>
+      <div class="grid g2">
+        <div class="card t"><span class="badge t">Bắt buộc</span><ul><li>Load NIfTI/DICOM, chuẩn orientation (RAS/LPS).</li><li><strong>Windowing gan</strong> (vd WL≈50, WW≈350 HU) + clip HU + scale [0,1].</li><li>Resize 256×256 (mặc định); loại slice không gan; grayscale→3 kênh; cache <code>.npy/.png</code>.</li></ul></div>
+        <div class="card a"><span class="badge a">Tùy chọn / khuyến nghị</span><ul><li>Resample spacing đồng nhất; <strong>liver ROI crop</strong> (từ mask khi train, heuristic khi infer).</li><li>Multi-window 3 kênh. <em>Không phù hợp 6 tuần:</em> bias field correction (MRI), registration đa thì, full 3D resampling.</li></ul></div>
+      </div>
+      <h3>Augmentation — thư viện <strong>Albumentations</strong> (2D nhanh, hợp slice-level)</h3>
+      <p><span class="badge g">Dùng</span> HFlip · rotation ±10–15° · ShiftScaleRotate · RandomResizedCrop · Brightness/Contrast · GaussNoise nhẹ. &nbsp; <span class="badge r">Cấm</span> lật dọc mạnh, biến dạng xóa tổn thương, cắt mất vùng gan positive, augmentation làm đổi nhãn. Val/test: chỉ resize + normalize.</p>
+      <h3>Lộ trình mô hình (tăng dần, tối đa 2–3 model chính)</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Bậc</th><th>Model</th><th>Vì sao</th><th>Hyperparameter cốt lõi</th></tr></thead>
+        <tbody>
+          <tr><td>Baseline</td><td>Custom CNN 4–5 khối</td><td>Sàn tham chiếu + kiểm pipeline</td><td rowspan="4">BCE+<code>pos_weight</code> · AdamW · lr 3e-4/1e-4 · batch 32@256 (8–16 nếu 4GB) · epoch 30–50 + early stopping · cosine · AMP · seed cố định</td></tr>
+          <tr><td>Baseline mạnh</td><td><strong>ResNet-50</strong> (ImageNet)</td><td>Cân bằng, Grad-CAM dễ</td></tr>
+          <tr><td>So sánh</td><td>EfficientNet-B0</td><td>Ít params, hiệu quả/VRAM</td></tr>
+          <tr><td>Dự phòng</td><td>DenseNet-121</td><td>Thường mạnh trên ảnh y tế 2D</td></tr>
+        </tbody>
+      </table></div>
+      <div class="grid g3">
+        <div class="card"><h4>Transfer learning</h4><p>ImageNet mặc định; 2 pha: freeze→gradual unfreezing + discriminative LR (backbone nhỏ hơn head ~10×).</p></div>
+        <div class="card"><h4>Mất cân bằng</h4><p>BCE+pos_weight hoặc WeightedRandomSampler; chuyển Focal loss nếu recall positive vẫn thấp. Label smoothing cho calibration.</p></div>
+        <div class="card"><h4>2.5D / 3D</h4><p>2.5D (3 slice lân cận = 3 kênh) là nice-to-have hợp lý; 3D để stretch, fallback 2.5D/2D nếu &gt;1 ngày không hội tụ.</p></div>
+      </div>
+    </section>
+
+    <section class="sec" id="arch">
+      <p class="eyebrow"><span class="num">08</span> Kiến trúc hệ thống</p>
+      <h2>Offline training pipeline nối online inference bằng quality gates</h2>
+      <pre class="mermaid">
+flowchart LR
+    A["Public data<br/>LiTS · IRCADb"] --> B["Ingest + checksum<br/>manifest.csv"]
+    B --> C["QC / audit<br/>montage"]
+    C --> D["Preprocess<br/>window·HU·resize·crop·cache"]
+    D --> E["Patient-level split<br/>StratGroupKFold + hold-out"]
+    E --> F["Train<br/>PyTorch + AMP + configs"]
+    F --> G["Evaluate<br/>ROC/PR/CI/calibration/threshold"]
+    G --> H[("Model registry<br/>MLflow: ckpt+metrics+version")]
+    H --> I["Inference API<br/>FastAPI + ONNX/PyTorch"]
+    I --> J["Demo UI<br/>Gradio + Grad-CAM"]
+    F -.-> M[("MLflow tracking")]
+    G -.-> R["reports/ figures+tables"]
+</pre>
+      <p style="margin-bottom:0">Online preprocessing <strong>import chung</strong> <code>src/preprocessing</code> với offline để không lệch phân phối. Mỗi model gắn <code>model_version</code> + preprocessing config hash + git commit; seed, config YAML, split JSON, <code>requirements</code> pin, Dockerfile đảm bảo reproducibility.</p>
+    </section>
+    <section class="sec" id="exp">
+      <p class="eyebrow"><span class="num">09</span> Experiment matrix</p>
+      <h2>Mỗi thí nghiệm đổi một yếu tố có lý do — không "fold đẹp nhất"</h2>
+      <div class="tw"><table>
+        <thead><tr><th class="c">ID</th><th>Mục tiêu</th><th>Model</th><th>Metric chính</th><th>Giữ / loại</th></tr></thead>
+        <tbody>
+          <tr><td class="c">E0</td><td>Sanity: overfit 3–5 ca</td><td>Custom CNN</td><td>loss↓≈0</td><td>Xác nhận pipeline đúng</td></tr>
+          <tr><td class="c">E1</td><td>CNN baseline</td><td>Custom CNN</td><td>AUC</td><td>Sàn tham chiếu</td></tr>
+          <tr><td class="c">E2</td><td>Pretrained no-aug</td><td>ResNet-50</td><td>AUC</td><td>Giữ nếu &gt; E1</td></tr>
+          <tr><td class="c">E3</td><td>Pretrained + aug</td><td>ResNet-50</td><td>AUC</td><td>Giữ nếu ≥ E2</td></tr>
+          <tr><td class="c">E4</td><td>Weighted loss vs sampler</td><td>ResNet-50</td><td>Sens@Spec=.90</td><td>Chọn cách xử lý imbalance</td></tr>
+          <tr><td class="c">E5</td><td>Focal loss</td><td>ResNet-50</td><td>Sens@Spec=.90</td><td>Giữ nếu recall↑</td></tr>
+          <tr><td class="c">E6</td><td>Fine-tuning strategy</td><td>ResNet-50</td><td>AUC</td><td>Freeze vs gradual unfreeze</td></tr>
+          <tr><td class="c">E7</td><td>Model thứ 2 so sánh</td><td>EfficientNet-B0</td><td>AUC</td><td>So với ResNet-50</td></tr>
+          <tr><td class="c">E8</td><td>Threshold optimization</td><td>best</td><td>Youden J / Sens-priority</td><td>Chốt ngưỡng trên <strong>val</strong></td></tr>
+          <tr><td class="c">E9</td><td>Small ensemble</td><td>ResNet+EffNet</td><td>AUC</td><td><span class="badge a">nice</span> nếu còn thời gian</td></tr>
+          <tr><td class="c">E10</td><td>External test</td><td>best</td><td>AUC + Δ</td><td>Đo domain shift, báo cáo trung thực</td></tr>
+        </tbody>
+      </table></div>
+      <p>Config-driven, seed cố định, log MLflow. Ví dụ <code>configs/exp/E3_resnet50_aug.yaml</code>:</p>
+      <pre><code>experiment_id: E3
+seed: 42
+dataset: {name: LiTS, version: v1.0, split: data/splits/lits_sgkfold_seed42.json,
+          tau_area: 10, tau_liver: 50}
+input:  {representation: slice_2d, size: 256, window: {wl: 50, ww: 350}, channels: 3}
+model:  {arch: resnet50, pretrained: imagenet, num_classes: 1}
+train:  {loss: bce_with_logits, pos_weight: auto, optimizer: adamw,
+         lr_head: 3.0e-4, lr_backbone: 1.0e-4, batch_size: 32, epochs: 50,
+         amp: true, scheduler: cosine, early_stopping: {monitor: val_ap, patience: 7}}
+eval:   {level: [slice, patient], patient_agg: {method: mean_topk, k: 3},
+         primary_metric: patient_auroc, bootstrap_n: 2000}</code></pre>
+      <pre><code># Train / Eval / External
+python -m src.training.train    --config configs/exp/E3_resnet50_aug.yaml
+python -m src.evaluation.evaluate --config configs/exp/E3_resnet50_aug.yaml --split test
+python -m src.evaluation.evaluate --config configs/exp/E3_resnet50_aug.yaml --external ircadb</code></pre>
+    </section>
+
+    <section class="sec" id="eval">
+      <p class="eyebrow"><span class="num">10</span> Evaluation protocol</p>
+      <h2>Không dùng Accuracy làm metric duy nhất — dữ liệu y tế mất cân bằng</h2>
+      <div class="grid g2">
+        <div class="card t"><h4>Công thức (từ TP/FP/TN/FN)</h4>
+          <pre style="margin:6px 0 0"><code>Accuracy   = (TP+TN)/(TP+TN+FP+FN)
+Sens/Recall= TP/(TP+FN)      # TPR
+Specificity= TN/(TN+FP)      # TNR
+Precision  = TP/(TP+FP)
+F1         = 2·P·R/(P+R)
+Youden J   = Sens + Spec − 1
+Brier      = mean((p − y)²)  # calibration</code></pre>
+        </div>
+        <div class="card g"><h4>Metric &amp; ngưỡng</h4><ul><li><strong>Quyết định:</strong> patient-level ROC-AUC + PR-AUC (threshold-independent).</li><li><strong>Phụ:</strong> Sens@Spec=0.90, F1, Brier, calibration slope.</li><li>Ngưỡng khóa trên <strong>validation</strong> (Youden J hoặc Sens-priority ≥0.90). <strong>Không</strong> tối ưu threshold trên test.</li><li>Báo cáo "Spec tại Sens mục tiêu".</li></ul></div>
+      </div>
+      <div class="callout r"><strong>Chống lỗi đánh giá:</strong> lấy CI ở <strong>mức bệnh nhân</strong> (không coi mỗi slice độc lập) · bootstrap 2000 lần resample bệnh nhân · mean±std qua 5 fold / 3 seed · so model bằng paired bootstrap · external test chạy đúng 1 lần sau khi khóa mọi lựa chọn. Với ~19 bn internal test, CI sẽ rộng — <strong>phải nêu rõ</strong>.</div>
+      <p style="margin-bottom:0"><strong>Xuất bắt buộc:</strong> ROC curve · PR curve · Confusion matrix (tại ngưỡng khóa) · Calibration curve + Brier · bảng metric có 95% CI · bảng per-fold.</p>
+    </section>
+
+    <section class="sec" id="xai">
+      <p class="eyebrow"><span class="num">11</span> Explainability &amp; error analysis</p>
+      <h2>Grad-CAM kiểm tra hành vi mô hình — không phải bằng chứng lâm sàng</h2>
+      <div class="grid g2">
+        <div class="card t"><h4>Phương pháp &amp; kiểm tra</h4><ul><li><strong>Grad-CAM</strong> (chính), Grad-CAM++ nếu kịp; saliency/IG tham khảo.</li><li>Đo tỷ lệ năng lượng heatmap nằm trong mask gan (proxy).</li><li>Phát hiện shortcut: heatmap bám chữ/marker/viền/giường bệnh thay vì gan.</li><li>Demo: overlay bán trong suốt + opacity slider.</li></ul></div>
+        <div class="card r"><h4>Error analysis — phân tầng lỗi</h4><ul><li>FP / FN; theo kích thước (&lt;10 / 10–30 / &gt;30 mm); số ổ.</li><li>Theo vị trí, phase/contrast, scanner/spacing, chất lượng ảnh, ROI đúng/sai.</li><li>Xuất <code>error_analysis.csv</code> + bảng review cho bác sĩ (case_id, y_true, p, error_type, size, Grad-CAM hợp lý Y/N).</li></ul></div>
+      </div>
+      <div class="callout a"><strong>Giới hạn diễn giải (bắt buộc nêu):</strong> explainability chỉ kiểm tra hành vi, KHÔNG chứng minh mô hình suy luận như bác sĩ; heatmap không phải bằng chứng lâm sàng.</div>
+    </section>
+
+    <section class="sec" id="demo">
+      <p class="eyebrow"><span class="num">12</span> Thiết kế demo</p>
+      <h2>Gradio + FastAPI + Docker — upload → nhãn + xác suất + heatmap</h2>
+      <div class="grid g2">
+        <div class="card t"><span class="badge t">Must-have</span><ul><li>Upload ảnh (PNG/JPG) hoặc volume (NIfTI/DICOM <code>.zip</code>) + kiểm định dạng.</li><li>Hiển thị ảnh (volume: slider chọn slice; auto-chọn slice nghi nhất).</li><li>Kết quả: nhãn · xác suất · <strong>ngưỡng đang dùng</strong> · Grad-CAM overlay.</li><li>Banner "⚠ Research use only"; model version + tóm tắt preprocessing.</li></ul></div>
+        <div class="card g"><span class="badge g">An toàn &amp; UX</span><ul><li>Xử lý lỗi file hỏng/không chứa gan rõ ràng.</li><li><strong>Không lưu dữ liệu người dùng</strong> ngoài ý muốn (in-memory/temp, xóa sau).</li><li>Sample cases ẩn danh để thử nhanh.</li><li>Đo latency; volume chậm → subsample slice + progress.</li></ul></div>
+      </div>
+      <div class="callout r"><strong>Phân biệt rõ:</strong> demo kỹ thuật = chứng minh pipeline end-to-end trên dữ liệu nghiên cứu. Sản phẩm y tế thực tế cần kiểm định lâm sàng, bảo mật PHI, giám sát, phê duyệt pháp lý — RUO ≠ thiết bị chẩn đoán.</div>
+    </section>
+    <section class="sec" id="timeline">
+      <p class="eyebrow"><span class="num">13</span> Kế hoạch 6 tuần &amp; milestones</p>
+      <h2>Tiến độ theo decision gates, không khóa dự án vào một mô hình</h2>
+      <div class="weeks">
+        <div class="wk"><div class="t">W1 · M1</div><h4>Data &amp; setup</h4><p>License, download+checksum, manifest, label transfer (τ), audit, patient-split + leakage test, preprocessing prototype, QC montage.</p></div>
+        <div class="wk"><div class="t">W2 · M2</div><h4>Baseline E2E</h4><p>Dataloader+aug, training loop+MLflow, evaluation+CI, E0 sanity, E1 CNN, E2 ResNet-50. Kết quả baseline đầu tiên.</p></div>
+        <div class="wk"><div class="t">W3 · M3</div><h4>Model chính</h4><p>E3 aug, E4 imbalance, E5 focal, E6 fine-tune; tune LR; vượt baseline ổn định qua fold.</p></div>
+        <div class="wk"><div class="t">W4 · M4</div><h4>Chốt &amp; đánh giá</h4><p>E7 model 2, E8 threshold (val), internal test 1 lần, bootstrap CI, calibration, Grad-CAM, error analysis, E10 external.</p></div>
+        <div class="wk"><div class="t">W5 · M5</div><h4>Demo &amp; đóng gói</h4><p>Inference (slice+volume), FastAPI, Gradio + heatmap, Docker, latency test, sample cases, xử lý lỗi.</p></div>
+        <div class="wk"><div class="t">W6 · M6</div><h4>Bàn giao</h4><p>Regression + re-run tái lập, final report 17 mục, model/data card, README, slide, video demo, release v1.0.</p></div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th>Decision gate</th><th>Pass</th><th>Fallback</th></tr></thead>
+        <tbody>
+          <tr><td>Cuối W1</td><td>Ảnh–mask khớp; overfit 3–5 ca được</td><td>Sửa orientation/spacing; mirror MSD; hoãn external</td></tr>
+          <tr><td>Cuối W2</td><td>E2 có AUC+CI patient-level</td><td>ResNet-18 @256, batch 8, cloud GPU</td></tr>
+          <tr><td>Cuối W3</td><td>Model chính vượt baseline</td><td>Giữ aug tối thiểu; BCE+pos_weight</td></tr>
+          <tr><td>Cuối W4</td><td>Threshold khóa + external report</td><td>Group-CV + bootstrap thay external, ghi rõ</td></tr>
+          <tr><td>Cuối W5</td><td>Demo Docker end-to-end</td><td>Cắt volume-upload, giữ slice-upload; PyTorch serving</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="sec" id="risk">
+      <p class="eyebrow"><span class="num">14</span> Risk register</p>
+      <h2>Thiết kế failure-first — kết quả âm tính vẫn có giá trị</h2>
+      <div class="tw"><table>
+        <thead><tr><th>Rủi ro</th><th class="c">P</th><th class="c">I</th><th>Giảm thiểu → Fallback</th></tr></thead>
+        <tbody>
+          <tr><td>Dataset không truy cập được</td><td class="c">T</td><td class="c">C</td><td>Mirror MSD, đăng ký sớm → hoãn IRCADb</td></tr>
+          <tr><td>Dataset nhỏ → CI rộng</td><td class="c">C</td><td class="c">B</td><td>Group K-fold + bootstrap, regularize → báo cáo CI trung thực</td></tr>
+          <tr><td><strong>Data leakage</strong> (slice cùng bn 2 phía)</td><td class="c">B</td><td class="c">C</td><td>Patient-split + assertion CI → chia lại theo bn</td></tr>
+          <tr><td>Mất cân bằng lớp nặng</td><td class="c">C</td><td class="c">B</td><td>pos_weight/sampler/focal → chỉnh threshold theo Sens</td></tr>
+          <tr><td>GPU/VRAM không đủ</td><td class="c">C</td><td class="c">B</td><td>AMP, batch nhỏ, 256px, grad-accum → cloud T4 / ResNet-18</td></tr>
+          <tr><td>Shortcut learning (marker/viền)</td><td class="c">B</td><td class="c">C</td><td>Crop gan, che metadata, kiểm Grad-CAM → tăng crop/aug</td></tr>
+          <tr><td>Val tốt, test/external kém</td><td class="c">B</td><td class="c">C</td><td>Regularize, robust preprocessing → báo cáo domain shift</td></tr>
+          <tr><td>Demo xử lý volume chậm</td><td class="c">B</td><td class="c">B</td><td>Subsample slice, async, cache → giới hạn slice + progress</td></tr>
+          <tr><td>Thiếu thời gian tài liệu</td><td class="c">C</td><td class="c">B</td><td>Viết report tăng dần từ W2 → ưu tiên README+cards+limitations</td></tr>
+        </tbody>
+      </table></div>
+      <p style="margin-bottom:0;font-size:13px;color:var(--muted)">P/I = Probability/Impact · T/B/C = Thấp/Trung bình/Cao. Decision rule ví dụ: 3D quá chậm sau W1 → 2D/2.5D; không có nhãn tin cậy → giữ binary có/không tổn thương; external bất khả thi → group-CV + bootstrap.</p>
+    </section>
+
+    <section class="sec" id="stack">
+      <p class="eyebrow"><span class="num">15</span> Hạ tầng &amp; technology stack</p>
+      <h2>Chỉ thư viện thực sự cần</h2>
+      <h3>Phần cứng</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Thành phần</th><th>Tối thiểu</th><th>Khuyến nghị</th></tr></thead>
+        <tbody>
+          <tr><td>GPU</td><td>4 GB (1050 Ti) — dev/inference</td><td>16 GB (T4/A10) — training chính</td></tr>
+          <tr><td>RAM</td><td>16 GB</td><td>32 GB</td></tr>
+          <tr><td>Storage</td><td>100 GB SSD</td><td>256 GB+ SSD</td></tr>
+          <tr><td>CPU</td><td>4 core</td><td>8+ core</td></tr>
+        </tbody></table></div>
+      <p style="color:var(--muted);font-size:13.5px">Dev/inference chạy local; <strong>training chính trên cloud GPU</strong> (Colab/Kaggle T4) — máy 4 GB vẫn giữ được core research với 256px + ResNet-18 + gradient accumulation.</p>
+      <h3>Technology stack — chỉ thư viện thực sự cần</h3>
+      <div class="grid g2">
+        <ul style="margin:0">
+          <li><strong>Python 3.10/3.11 · PyTorch 2.x</strong> + torchvision/timm</li>
+          <li>nibabel · pydicom · SimpleITK · (MONAI nếu 3D)</li>
+          <li>Albumentations · scikit-learn · pandas · NumPy</li>
+        </ul>
+        <ul style="margin:0">
+          <li>pytorch-grad-cam · <strong>MLflow</strong></li>
+          <li><strong>FastAPI</strong> + uvicorn · <strong>Gradio</strong> · ONNX Runtime (optional)</li>
+          <li><strong>Docker</strong> · pytest · pre-commit (black/ruff/isort)</li>
+        </ul>
+      </div>
+      <p style="margin-bottom:0"><strong>Repo:</strong> <code>configs/ data/ notebooks/ src/{data,preprocessing,augmentation,models,training,evaluation,explainability,inference} app/ tests/ scripts/ reports/ docs/</code> + <code>Dockerfile · requirements.txt · README · MODEL_CARD · DATA_CARD</code>. Naming: <code>lits_v1.0</code>, <code>E3_resnet50_aug</code>, <code>model_v0.3+a1b2c3d</code>.</p>
+    </section>
+
+    <section class="sec" id="scopebox">
+      <p class="eyebrow"><span class="num">16</span> Recommended Final Scope &amp; 6-Week Critical Path</p>
+      <h2>Phạm vi chốt và đường găng</h2>
+      <div class="grid g2">
+        <div class="card g"><span class="badge g">Scope chốt</span><ul style="margin:6px 0 0">
+          <li><strong>Bài toán:</strong> binary — slice có tổn thương vs gan bình thường → patient-level.</li>
+          <li><strong>Data:</strong> LiTS (chính) · MSD (mirror) · IRCADb (external).</li>
+          <li><strong>Model:</strong> Custom CNN → ResNet-50 (+EffNet-B0, DenseNet-121 dự phòng).</li>
+          <li><strong>Loss:</strong> BCE+pos_weight → sampler/focal nếu cần.</li>
+          <li><strong>Metric:</strong> patient ROC-AUC + PR-AUC + Sens@Spec=.90, 95% CI.</li>
+          <li><strong>Split:</strong> StratGroupKFold(5) + hold-out, patient-level.</li>
+          <li><strong>XAI/Demo:</strong> Grad-CAM · Gradio+FastAPI+Docker.</li>
+        </ul></div>
+        <div class="card t"><span class="badge t">Critical path</span><ol style="margin:6px 0 0">
+          <li>Data/split (W1) — <em>nguy hiểm nhất nếu trễ</em></li>
+          <li>Training pipeline (W2)</li>
+          <li>Model chính vượt baseline (W3)</li>
+          <li>Eval khóa + external (W4)</li>
+          <li>Demo Docker (W5)</li>
+          <li>Docs + release v1.0 (W6)</li>
+        </ol></div>
+      </div>
+      <div class="callout r"><strong>Cut-list nếu chậm (cắt từ trên xuống):</strong> 3D → ensemble/ONNX → multiclass → 2.5D → external đầy đủ (thay bằng group-CV+bootstrap) → volume-upload demo → IG/Grad-CAM++ → resample/liver-crop segmentor → video demo → HF Spaces. <strong>Không bao giờ cắt:</strong> patient-split, leakage test, threshold khóa từ val, CI+limitations, disclaimer, README+reproducibility.</div>
+    </section>
+
+    <section class="sec" id="dod">
+      <p class="eyebrow"><span class="num">17</span> Definition of Done &amp; 48 giờ đầu</p>
+      <h2>Tiêu chí nghiệm thu và việc khởi động ngay</h2>
+      <div class="grid g2">
+        <div class="card g"><span class="badge g">DoD toàn dự án</span><ul style="margin:6px 0 0">
+          <li>Pipeline raw→prediction, config-driven, seed cố định.</li>
+          <li>Patient-level split; leakage test pass trong CI.</li>
+          <li>Baseline + model chính vượt baseline (mean±std qua fold).</li>
+          <li>Acc/Sens/Spec/ROC-AUC/PR-AUC/F1 + <strong>95% CI</strong>.</li>
+          <li>ROC + PR + confusion matrix + calibration curve.</li>
+          <li>Threshold khóa từ val; Grad-CAM tích hợp demo.</li>
+          <li>Demo Docker chạy; unit test cơ bản; README + reproducibility.</li>
+          <li>MODEL_CARD + DATA_CARD + limitations + disclaimer.</li>
+        </ul></div>
+        <div class="card a"><span class="badge a">10 việc trong 48 giờ đầu</span><ol style="margin:6px 0 0">
+          <li>Repo + cấu trúc + pyproject + pre-commit + CI.</li>
+          <li>Lưu license/terms LiTS &amp; IRCADb vào DATA_CARD.</li>
+          <li><code>download_data.py</code> + tải 5–10 volume + checksum.</li>
+          <li>Loader NIfTI/DICOM; đọc thử 1 volume+mask.</li>
+          <li><code>build_manifest.py</code> (slice-level).</li>
+          <li>Chốt <code>τ_area, τ_liver</code>; in phân bố lớp.</li>
+          <li>QC montage 20–30 slice (overlay mask).</li>
+          <li><code>make_split.py</code> + <code>test_leakage.py</code>.</li>
+          <li>Preprocessing prototype + cache 1 volume.</li>
+          <li>GitHub Project board + import Epic A–D.</li>
+        </ol></div>
+      </div>
+      <div class="callout"><strong>Khóa trước cuối tuần 1:</strong> phạm vi &amp; giả định · dataset chính/backup/external · label transfer (τ) + rule EXCLUDE · windowing + kích thước ảnh · split scheme + leakage test · metric chính + cách gộp patient · compute plan · prediction-time rule (feature whitelist).</div>
+    </section>
+  </main>
+</div>
+
+<footer class="foot">
+  <div class="dis"><strong>⚠ Disclaimer y tế — Research Use Only.</strong> Đây là công cụ nghiên cứu / hỗ trợ quyết định, KHÔNG phải thiết bị chẩn đoán đã kiểm định. Mọi kết quả cần bác sĩ xem xét trong toàn bộ bối cảnh lâm sàng; hệ thống không thay thế phán đoán y khoa. Số liệu dataset đánh dấu "⚠ verify" cần đối chiếu nguồn chính thức trước khi trích dẫn.</div>
+  <p style="margin-top:14px">Liver-CT Detect · Kế hoạch R&amp;D 6 tuần · Bản trình bày trực quan của <code>docs/Liver_Cancer_AI_6Week_Plan.md</code> (tài liệu đầy đủ 24 mục).</p>
+</footer>
+<button class="totop" id="totop" type="button" aria-label="Về đầu trang">↑</button>
+
+<script>
+  (function () {
+    var docEl = document.documentElement;
+    var progress = document.getElementById('progress');
+    var totop = document.getElementById('totop');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function onScroll() {
+      var max = docEl.scrollHeight - window.innerHeight;
+      var r = max > 0 ? window.scrollY / max : 0;
+      progress.style.transform = 'scaleX(' + r + ')';
+      totop.classList.toggle('on', window.scrollY > 480);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    totop.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    });
+
+    // Theme toggle: light <-> dark (stamps data-theme, which overrides the media query)
+    var btn = document.getElementById('themeBtn');
+    btn.addEventListener('click', function () {
+      var next = docEl.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      docEl.setAttribute('data-theme', next);
+      btn.textContent = next === 'dark' ? '☾ Tối' : '☀ Sáng';
+    });
+
+    var secs = Array.prototype.slice.call(document.querySelectorAll('.sec'));
+
+    // Scroll-reveal — content is visible by default; only gate it once JS confirms support,
+    // and a timeout safety-net guarantees no section can ship hidden.
+    if (!reduce && 'IntersectionObserver' in window) {
+      document.body.classList.add('js');
+      var reveal = function (el) { el.classList.add('in'); };
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
+      secs.forEach(function (s) { io.observe(s); });
+      setTimeout(function () { secs.forEach(reveal); }, 1600);
+    }
+
+    // Active section highlight in the table of contents
+    var links = {};
+    document.querySelectorAll('.toc a').forEach(function (a) {
+      var id = a.getAttribute('href').slice(1);
+      if (id) links[id] = a;
+    });
+    if ('IntersectionObserver' in window) {
+      var spy = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          var a = links[e.target.id];
+          if (a && e.isIntersecting) {
+            Object.keys(links).forEach(function (k) { links[k].classList.remove('active'); });
+            a.classList.add('active');
+          }
+        });
+      }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+      secs.forEach(function (s) { if (s.id) spy.observe(s); });
+    }
+
+    onScroll();
+  })();
+</script>
