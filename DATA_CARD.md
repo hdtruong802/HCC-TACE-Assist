@@ -2,7 +2,7 @@
 
 ## Nguồn & license
 - **Dataset:** LiTS (Liver Tumor Segmentation Benchmark, ISBI/MICCAI 2017).
-- **Truy cập (khuyến nghị):** Kaggle `andrewmvd/liver-tumor-segmentation` — 131 ca CT có nhãn, NIfTI.
+- **Truy cập (khuyến nghị):** Kaggle — **tách đôi, attach cả hai**: `andrewmvd/liver-tumor-segmentation` (131 segmentations + volume 0–50) và `andrewmvd/liver-tumor-segmentation-part-2` (volume 51–130). Tổng 131 ca CT có nhãn, NIfTI. Mount tại `/kaggle/input/*`.
 - **Nguồn gốc:** CodaLab competition 17094 (Bilic et al., *Medical Image Analysis* 2023; arXiv:1901.04056).
 - **License:** CC BY-NC-SA (phi thương mại — hợp mục đích **nghiên cứu**). Ghi công nguồn; **không** dùng thương mại.
 - ⚠ **Không commit ảnh y tế thô/cache vào git** — chỉ manifest/split/config/report/DATA_CARD. Người khác tự tải qua Kaggle.

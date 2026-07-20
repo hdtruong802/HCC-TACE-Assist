@@ -3,7 +3,11 @@
 dataset:
   name: lits
   version: v1
-  data_root: /kaggle/input/liver-tumor-segmentation
+  # LiTS trên Kaggle tách đôi → attach CẢ HAI, dùng /kaggle/input làm gốc:
+  #   andrewmvd/liver-tumor-segmentation        (131 seg + volume 0-50)
+  #   andrewmvd/liver-tumor-segmentation-part-2 (volume 51-130)
+  # glob đệ quy tự khớp volume↔segmentation theo id.
+  data_root: /kaggle/input
   volume_glob: "**/volume-*.nii*"
   seg_glob: "**/segmentation-*.nii*"
 

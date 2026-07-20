@@ -1,5 +1,5 @@
 {
-  "id": "REPLACE_WITH_YOUR_KAGGLE_USERNAME/lits-w1-data",
+  "id": "marcohoang/lits-w1-data",
   "title": "LiTS W1 Data",
   "code_file": "01_data_kaggle.ipynb",
   "language": "python",
@@ -8,7 +8,7 @@
   "enable_gpu": false,
   "enable_tpu": false,
   "enable_internet": true,
-  "dataset_sources": ["andrewmvd/liver-tumor-segmentation"],
+  "dataset_sources": ["andrewmvd/liver-tumor-segmentation", "andrewmvd/liver-tumor-segmentation-part-2"],
   "competition_sources": [],
   "kernel_sources": [],
   "model_sources": []
