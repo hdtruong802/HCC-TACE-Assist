@@ -33,7 +33,7 @@ AI phát hiện tổn thương ung thư gan trên ảnh CT — **công cụ nghi
 ## Index tài liệu (nạp khi cần, đừng đọc hết cùng lúc)
 - **Chốt kỹ thuật (đọc trước tiên):** `report/T3_W1_Spec_Sheet.md`
 - Kế hoạch 6 tuần chi tiết: `docs/Liver_Cancer_AI_6Week_Plan.md`
-- Tổng quan nghiên cứu + benchmark: `docs/Liver_Cancer_AI_Research_Overview.md` (bản đầy đủ: `report/T3_W1.md`)
+- Tổng quan nghiên cứu + benchmark (có trích dẫn): `report/T3_W1.md`
 - **Nhật ký bàn giao giữa các tool:** `docs/WORKLOG.md` ← đọc phần cuối trước khi bắt đầu
 
 ## Quy ước làm việc đa công cụ (mọi tool tuân theo)
