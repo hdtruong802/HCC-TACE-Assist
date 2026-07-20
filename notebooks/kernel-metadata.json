@@ -1,0 +1,15 @@
+{
+  "id": "REPLACE_WITH_YOUR_KAGGLE_USERNAME/lits-w1-data",
+  "title": "LiTS W1 Data",
+  "code_file": "01_data_kaggle.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": ["andrewmvd/liver-tumor-segmentation"],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}
