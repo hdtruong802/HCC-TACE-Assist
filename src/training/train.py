@@ -124,11 +124,16 @@ def main() -> None:
     os.makedirs(out_dir, exist_ok=True)
     best_auc, best_ep, patience = -1.0, -1, tr["early_stopping"]["patience"]
 
+    nb = len(dl_tr)
+    log_every = max(1, nb // 10)          # in ~10 mốc/epoch
     for ep in range(epochs):
         set_backbone_requires_grad(model, ep >= tr["freeze_backbone_epochs"])
+        frozen = "" if ep >= tr["freeze_backbone_epochs"] else " [backbone frozen]"
+        print(f"\n===== Epoch {ep + 1}/{epochs}{frozen} — {nb} batch, lr={opt.param_groups[0]['lr']:.2e} =====",
+              flush=True)
         model.train()
-        run_loss = 0.0
-        for img, y, _ in dl_tr:
+        run_loss, seen = 0.0, 0
+        for bi, (img, y, _) in enumerate(dl_tr):
             img = img.to(device, non_blocking=True); y = y.to(device)
             if tr.get("label_smoothing", 0):
                 eps = tr["label_smoothing"]; y = y * (1 - eps) + 0.5 * eps
@@ -140,23 +145,28 @@ def main() -> None:
                 else:
                     loss = F.binary_cross_entropy_with_logits(logit, y, pos_weight=pos_weight)
             scaler.scale(loss).backward(); scaler.step(opt); scaler.update()
-            run_loss += loss.item() * img.size(0)
+            run_loss += loss.item() * img.size(0); seen += img.size(0)
+            if (bi + 1) % log_every == 0 or bi + 1 == nb:
+                pct = 100 * (bi + 1) / nb
+                print(f"  Epoch {ep + 1}/{epochs}  batch {bi + 1}/{nb} ({pct:4.0f}%)  "
+                      f"train_loss={run_loss / seen:.4f}", flush=True)
         sched.step()
+        train_loss = run_loss / max(1, seen)
 
         # ---- validate (patient-level AUROC) ----
         if len(ds_va):
             p, lb, pid = predict(model, dl_va, device)
             rep = full_report(pid, p, lb, threshold=None, cfg=cfg["eval"])
             val_auc = rep["auroc"]
-            msg = (f"ep{ep:02d} loss={run_loss/max(1,len(ds_tr)):.4f} "
-                   f"val_auroc={val_auc:.4f} CI[{rep['ci_low']:.3f},{rep['ci_high']:.3f}] "
+            msg = (f">> Epoch {ep + 1}/{epochs} DONE | train_loss={train_loss:.4f} | "
+                   f"val_auroc={val_auc:.4f} CI[{rep['ci_low']:.3f},{rep['ci_high']:.3f}] | "
                    f"sens@spec90={rep['sens_at_spec90']:.3f}")
         else:
-            val_auc, rep, msg = float("nan"), {}, f"ep{ep:02d} loss={run_loss/max(1,len(ds_tr)):.4f}"
-        print(msg)
+            val_auc, rep, msg = float("nan"), {}, f">> Epoch {ep + 1}/{epochs} DONE | train_loss={train_loss:.4f}"
+        print(msg, flush=True)
         if use_mlflow:
             import mlflow
-            mlflow.log_metrics({"val_auroc": val_auc, "train_loss": run_loss / max(1, len(ds_tr))}, step=ep)
+            mlflow.log_metrics({"val_auroc": val_auc, "train_loss": train_loss}, step=ep)
 
         if val_auc > best_auc:
             best_auc, best_ep = val_auc, ep

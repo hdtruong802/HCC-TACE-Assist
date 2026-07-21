@@ -60,7 +60,7 @@ def build_transforms(size: int, train: bool):
             A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.1, rotate_limit=15,
                                border_mode=0, p=0.5),
             A.RandomBrightnessContrast(0.2, 0.2, p=0.5),
-            A.GaussNoise(var_limit=(5.0, 20.0), p=0.2),
+            A.GaussNoise(p=0.2),
             A.Resize(size, size),
             A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
             ToTensorV2(),

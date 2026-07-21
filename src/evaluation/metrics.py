@@ -9,18 +9,20 @@ from sklearn.metrics import average_precision_score, roc_auc_score, roc_curve
 def aggregate_patient(patient_ids, probs, labels, method: str = "mean_topk", topk: int = 3) -> pd.DataFrame:
     """Gộp xác suất slice → điểm mức bệnh nhân. Nhãn bệnh nhân = max nhãn slice."""
     df = pd.DataFrame({"patient_id": patient_ids, "prob": probs, "label": labels})
-
-    def agg(g):
-        p = np.sort(g["prob"].values)[::-1]
-        if method == "max":
-            score = float(p[0])
-        elif method == "mean":
-            score = float(p.mean())
-        else:  # mean_topk
-            score = float(p[: max(1, topk)].mean())
-        return pd.Series({"score": score, "label": int(g["label"].max())})
-
-    return df.groupby("patient_id").apply(agg).reset_index()
+    g = df.groupby("patient_id")
+    label = g["label"].max()
+    if method == "max":
+        score = g["prob"].max()
+    elif method == "mean":
+        score = g["prob"].mean()
+    else:  # mean_topk
+        k = max(1, topk)
+        score = g["prob"].apply(lambda s: np.sort(s.to_numpy())[::-1][:k].mean())
+    return pd.DataFrame({
+        "patient_id": label.index,
+        "score": score.reindex(label.index).to_numpy(dtype=float),
+        "label": label.to_numpy().astype(int),
+    }).reset_index(drop=True)
 
 
 def _safe_auc(y, s):
