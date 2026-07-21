@@ -13,6 +13,11 @@
 
 ---
 
+## [2026-07-21 · Claude Code] — W2 Pha 1: sàng lọc 4 backbone (fold 0)
+- **Done:** Train+eval 4 backbone (fold 0, slice-selected). Xếp hạng **slice-AUROC**: ConvNeXt V2 nano **0.882 [0.815,0.921]** > FastViT sa12 **0.874 [0.815,0.917]** > ResNet-50 (baseline) 0.837 [0.757,0.892] > EfficientNet-B0 0.826 [0.745,0.881]. Báo cáo: `report/T3_W2_Phase1.md`.
+- **Decisions:** Finalist Pha 2 = **ConvNeXt V2 + FastViT** (+ ResNet-50 anchor); loại EfficientNet-B0. Nghịch lý minh hoạ: ConvNeXt slice cao nhất nhưng patient thấp nhất → khẳng định dùng slice-level. Mọi model hiện đại overfit nhanh (best ep 2–4) → Pha 2 tăng regularization.
+- **Next:** Pha 2 = 5-fold × seed OOF + paired bootstrap ConvNeXt vs FastViT → chốt main + khóa threshold.
+
 ## [2026-07-21 · Claude Code] — W2: thêm slice-level metrics (ổn định hơn patient)
 - **Done:** `metrics.full_report` nay trả về CẢ patient-level và **slice-level** (auroc/pr/sens/spec/f1 + threshold Youden slice) với **CI cluster-bootstrap theo bệnh nhân** (không phóng đại). Train chọn best-ckpt/early-stop theo `slice_auroc` (config `train.select_metric`), in cả slice + patient AUROC/epoch. Eval bật slice-bootstrap CI + vẽ roc_slice/pr_slice. Test synthetic: patient CI thoái hoá [1,1] vs slice CI hẹp có nghĩa.
 - **Why:** val 1 fold chỉ 3 ca âm → patient metrics vô nghĩa; slice (2,555) ổn định để so sánh backbone công bằng.
