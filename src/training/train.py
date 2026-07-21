@@ -26,7 +26,9 @@ except Exception:  # noqa: BLE001
     pass
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from src.data.dataset import LitsSliceDataset, build_transforms, fold_patients, load_split  # noqa: E402
+from src.data.dataset import (  # noqa: E402
+    LitsSliceDataset, build_transforms, fold_patients, load_split, resolve,
+)
 from src.evaluation.metrics import full_report  # noqa: E402
 from src.models.factory import build_model, param_groups, set_backbone_requires_grad  # noqa: E402
 
@@ -76,11 +78,11 @@ def main() -> None:
     print(f"arch={arch} fold={fold} epochs={epochs} device={device}")
 
     # ---- data ----
-    manifest = pd.read_csv(os.path.join(root, cfg["data"]["manifest"]))
-    split = load_split(os.path.join(root, cfg["data"]["split"]))
+    manifest = pd.read_csv(resolve(root, cfg["data"]["manifest"]))
+    split = load_split(resolve(root, cfg["data"]["split"]))
     train_p, val_p, _ = fold_patients(split, fold)
     size = cfg["data"]["size"]
-    img_path = os.path.join(root, cfg["data"]["image_file"])
+    img_path = resolve(root, cfg["data"]["image_file"])
     ds_tr = LitsSliceDataset(manifest, img_path, train_p, build_transforms(size, True))
     ds_va = LitsSliceDataset(manifest, img_path, val_p, build_transforms(size, False))
     nw = tr["num_workers"]

@@ -19,7 +19,9 @@ import yaml
 from torch.utils.data import DataLoader
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from src.data.dataset import LitsSliceDataset, build_transforms, fold_patients, load_split  # noqa: E402
+from src.data.dataset import (  # noqa: E402
+    LitsSliceDataset, build_transforms, fold_patients, load_split, resolve,
+)
 from src.evaluation.metrics import aggregate_patient, full_report  # noqa: E402
 from src.models.factory import build_model  # noqa: E402
 from src.training.train import predict  # noqa: E402
@@ -75,11 +77,11 @@ def main() -> None:
     model = build_model(ck["arch"], pretrained=False, drop_rate=cfg["model"]["drop_rate"]).to(device)
     model.load_state_dict(ck["model"])
 
-    manifest = pd.read_csv(os.path.join(root, cfg["data"]["manifest"]))
-    split = load_split(os.path.join(root, cfg["data"]["split"]))
+    manifest = pd.read_csv(resolve(root, cfg["data"]["manifest"]))
+    split = load_split(resolve(root, cfg["data"]["split"]))
     train_p, val_p, test_p = fold_patients(split, args.fold)
     patients = val_p if args.split == "val" else test_p
-    ds = LitsSliceDataset(manifest, os.path.join(root, cfg["data"]["image_file"]), patients,
+    ds = LitsSliceDataset(manifest, resolve(root, cfg["data"]["image_file"]), patients,
                           build_transforms(cfg["data"]["size"], False))
     dl = DataLoader(ds, batch_size=cfg["train"]["batch_size"], shuffle=False,
                     num_workers=cfg["train"]["num_workers"], pin_memory=True)

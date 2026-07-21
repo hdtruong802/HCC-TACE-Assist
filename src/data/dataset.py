@@ -1,7 +1,9 @@
 """PyTorch Dataset cho LiTS packed cache (images_u8.npy) + patient-level split."""
 from __future__ import annotations
 
+import glob
 import json
+import os
 
 import numpy as np
 import pandas as pd
@@ -10,6 +12,22 @@ from torch.utils.data import Dataset
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
+
+
+def resolve(root: str, rel: str) -> str:
+    """Tìm file linh hoạt: {root}/{rel} → ./{rel} → ./data/{rel} → glob theo tên.
+
+    Bền với trường hợp dataset đóng gói thiếu file ở gốc (vd split nằm trong repo clone).
+    """
+    base = os.path.basename(rel)
+    for c in (os.path.join(root, rel), rel, os.path.join("data", rel)):
+        if os.path.exists(c):
+            return c
+    for pat in (os.path.join(root, "**", base), os.path.join("**", base)):
+        hits = glob.glob(pat, recursive=True)
+        if hits:
+            return hits[0]
+    raise FileNotFoundError(f"Không tìm thấy {rel} (root={root})")
 
 
 def load_split(path: str) -> dict:
