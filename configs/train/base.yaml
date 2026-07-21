@@ -29,7 +29,8 @@ train:
   scheduler: cosine
   warmup_epochs: 1
   freeze_backbone_epochs: 1 # freeze backbone vài epoch đầu (gradual unfreeze)
-  early_stopping: { monitor: val_auroc, patience: 5, mode: max }
+  select_metric: slice_auroc # metric chọn best-ckpt + early-stop (slice ổn định hơn patient khi ít ca âm)
+  early_stopping: { patience: 5 }
   num_workers: 2
   seed: 42
 

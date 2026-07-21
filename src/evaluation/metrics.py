@@ -77,20 +77,60 @@ def sens_at_spec(y, s, target_spec: float = 0.90) -> float:
     return float(tpr[ok].max()) if len(ok) else float("nan")
 
 
-def full_report(patient_ids, probs, labels, threshold=None, cfg=None) -> dict:
-    """Bộ metric patient-level đầy đủ. Nếu threshold=None → tự chọn (Youden)."""
+def bootstrap_slice_auc(patient_ids, probs, labels, n: int = 2000, seed: int = 42) -> dict:
+    """95% CI cho slice-level AUROC bằng CLUSTER bootstrap (resample BỆNH NHÂN, giữ cả slice của họ).
+
+    Không resample slice độc lập (sẽ phóng đại độ chắc chắn vì slice cùng bn tương quan).
+    """
+    patient_ids = np.asarray(patient_ids); probs = np.asarray(probs); labels = np.asarray(labels)
+    uniq = np.unique(patient_ids)
+    idx_by_pid = {pid: np.where(patient_ids == pid)[0] for pid in uniq}
+    rng = np.random.default_rng(seed); vals = []
+    for _ in range(n):
+        samp = rng.choice(uniq, size=len(uniq), replace=True)
+        idx = np.concatenate([idx_by_pid[p] for p in samp])
+        yy = labels[idx]
+        if len(np.unique(yy)) < 2:
+            continue
+        vals.append(roc_auc_score(yy, probs[idx]))
+    if not vals:
+        return {"slice_auroc_mean": float("nan"), "slice_ci_low": float("nan"), "slice_ci_high": float("nan")}
+    lo, hi = np.percentile(vals, [2.5, 97.5])
+    return {"slice_auroc_mean": float(np.mean(vals)), "slice_ci_low": float(lo), "slice_ci_high": float(hi)}
+
+
+def full_report(patient_ids, probs, labels, threshold=None, cfg=None, slice_bootstrap=False) -> dict:
+    """Metric cả PATIENT-level và SLICE-level. threshold=None → tự chọn (Youden) cho patient."""
     cfg = cfg or {}
+    target = cfg.get("target_spec", 0.90)
+    boot = cfg.get("bootstrap_n", 2000)
+
+    # ---- patient-level (đơn vị báo cáo chính, nhưng ít bệnh nhân → nhiễu) ----
     pdf = aggregate_patient(patient_ids, probs, labels,
                             cfg.get("patient_agg", "mean_topk"), cfg.get("topk", 3))
     y, s = pdf.label.values, pdf.score.values
-    if threshold is None:
-        threshold = choose_threshold(y, s, "youden")
+    thr_pat = threshold if threshold is not None else choose_threshold(y, s, "youden")
     rep = {
         "n_patients": int(len(pdf)), "n_pos": int((y == 1).sum()),
         "auroc": _safe_auc(y, s),
         "pr_auc": float(average_precision_score(y, s)) if len(np.unique(y)) > 1 else float("nan"),
-        "sens_at_spec90": sens_at_spec(y, s, cfg.get("target_spec", 0.90)),
-        **point_metrics(y, s, threshold),
-        **bootstrap_auc(y, s, cfg.get("bootstrap_n", 2000)),
+        "sens_at_spec90": sens_at_spec(y, s, target),
+        **point_metrics(y, s, thr_pat),
+        **bootstrap_auc(y, s, boot),
     }
+
+    # ---- slice-level (ổn định hơn: nhiều slice âm; CI theo cluster-bootstrap bệnh nhân) ----
+    probs = np.asarray(probs); labels = np.asarray(labels)
+    thr_sl = choose_threshold(labels, probs, "youden") if len(np.unique(labels)) > 1 else 0.5
+    sm = point_metrics(labels, probs, thr_sl)
+    rep.update({
+        "slice_n": int(len(labels)), "slice_pos": int((labels == 1).sum()),
+        "slice_auroc": _safe_auc(labels, probs),
+        "slice_pr_auc": float(average_precision_score(labels, probs)) if len(np.unique(labels)) > 1 else float("nan"),
+        "slice_sens_at_spec90": sens_at_spec(labels, probs, target),
+        "slice_threshold": sm["threshold"], "slice_sensitivity": sm["sensitivity"],
+        "slice_specificity": sm["specificity"], "slice_f1": sm["f1"], "slice_accuracy": sm["accuracy"],
+    })
+    if slice_bootstrap:
+        rep.update(bootstrap_slice_auc(patient_ids, probs, labels, boot))
     return rep

@@ -129,7 +129,8 @@ def main() -> None:
 
     out_dir = os.path.join(cfg["output"]["dir"], f"{arch}_fold{fold}")
     os.makedirs(out_dir, exist_ok=True)
-    best_auc, best_ep, patience = -1.0, -1, tr["early_stopping"]["patience"]
+    sel = tr.get("select_metric", "slice_auroc")   # chọn best-ckpt/early-stop theo metric ổn định
+    best_metric, best_ep, patience = -1.0, -1, tr["early_stopping"]["patience"]
 
     for ep in range(epochs):
         set_backbone_requires_grad(model, ep >= tr["freeze_backbone_epochs"])
@@ -158,35 +159,36 @@ def main() -> None:
         sched.step()
         train_loss = run_loss / max(1, seen)
 
-        # ---- validate (patient-level) + in TOÀN BỘ metric cuối epoch ----
+        # ---- validate: SLICE-level (ổn định, chọn model) + PATIENT-level (báo cáo) ----
         if len(ds_va):
             p, lb, pid = predict(model, dl_va, device)
             rep = full_report(pid, p, lb, threshold=None, cfg=cfg["eval"])
-            val_auc = rep["auroc"]
+            val_metric = rep.get(sel, rep["auroc"])
             msg = (f"  Epoch {ep + 1}/{epochs} | train_loss={train_loss:.4f} | "
-                   f"val_auroc={val_auc:.4f} CI[{rep['ci_low']:.3f},{rep['ci_high']:.3f}] | "
-                   f"pr_auc={rep['pr_auc']:.3f} | sens@spec90={rep['sens_at_spec90']:.3f} | "
-                   f"sens={rep['sensitivity']:.3f} spec={rep['specificity']:.3f} "
-                   f"f1={rep['f1']:.3f} acc={rep['accuracy']:.3f} @thr={rep['threshold']:.2f}")
+                   f"slice_auroc={rep['slice_auroc']:.4f} | "
+                   f"patient_auroc={rep['auroc']:.4f} CI[{rep['ci_low']:.3f},{rep['ci_high']:.3f}] | "
+                   f"pr_auc={rep['pr_auc']:.3f} | sens@spec90(patient)={rep['sens_at_spec90']:.3f}")
         else:
-            val_auc, rep, msg = float("nan"), {}, f"  Epoch {ep + 1}/{epochs} | train_loss={train_loss:.4f}"
+            val_metric, rep, msg = float("nan"), {}, f"  Epoch {ep + 1}/{epochs} | train_loss={train_loss:.4f}"
         print(msg, flush=True)
         if use_mlflow:
             import mlflow
-            mlflow.log_metrics({"val_auroc": val_auc, "train_loss": train_loss}, step=ep)
+            mlflow.log_metrics({"slice_auroc": rep.get("slice_auroc", float("nan")),
+                                "patient_auroc": rep.get("auroc", float("nan")),
+                                "train_loss": train_loss}, step=ep)
 
-        if val_auc > best_auc:
-            best_auc, best_ep = val_auc, ep
+        if val_metric > best_metric:
+            best_metric, best_ep = val_metric, ep
             torch.save({"model": model.state_dict(), "arch": arch, "cfg": cfg,
                         "val": rep, "epoch": ep}, os.path.join(out_dir, "best.ckpt"))
             json.dump(rep, open(os.path.join(out_dir, "val_metrics.json"), "w"), indent=2)
         if best_ep >= 0 and ep - best_ep >= patience:
-            print(f"early stop @ ep{ep} (best ep{best_ep} auroc={best_auc:.4f})"); break
+            print(f"early stop @ Epoch {ep + 1} (best Epoch {best_ep + 1}, {sel}={best_metric:.4f})"); break
 
-    print(f"DONE best val_auroc={best_auc:.4f} @ ep{best_ep} → {out_dir}/best.ckpt")
+    print(f"DONE best {sel}={best_metric:.4f} @ Epoch {best_ep + 1} → {out_dir}/best.ckpt")
     if use_mlflow:
         import mlflow
-        mlflow.log_metric("best_val_auroc", best_auc); mlflow.end_run()
+        mlflow.log_metric(f"best_{sel}", best_metric); mlflow.end_run()
 
 
 if __name__ == "__main__":

@@ -13,6 +13,11 @@
 
 ---
 
+## [2026-07-21 · Claude Code] — W2: thêm slice-level metrics (ổn định hơn patient)
+- **Done:** `metrics.full_report` nay trả về CẢ patient-level và **slice-level** (auroc/pr/sens/spec/f1 + threshold Youden slice) với **CI cluster-bootstrap theo bệnh nhân** (không phóng đại). Train chọn best-ckpt/early-stop theo `slice_auroc` (config `train.select_metric`), in cả slice + patient AUROC/epoch. Eval bật slice-bootstrap CI + vẽ roc_slice/pr_slice. Test synthetic: patient CI thoái hoá [1,1] vs slice CI hẹp có nghĩa.
+- **Why:** val 1 fold chỉ 3 ca âm → patient metrics vô nghĩa; slice (2,555) ổn định để so sánh backbone công bằng.
+- **Next:** chạy lại eval ResNet-50 (có slice metrics) → Pha 1: ConvNeXt V2 + backbone khác, xếp hạng theo slice_auroc.
+
 ## [2026-07-21 · Claude Code] — W2 M2: baseline ResNet-50 chạy trọn ✅
 - **Done:** Train baseline **ResNet-50 fold0** trên Kaggle T4: hội tụ (loss 0.88→0.15), **best val patient-AUROC=0.895 @ep8** (early-stop ep13), PR-AUC~0.98. Pipeline train→eval→ckpt OK. Fix dọc đường: DATA_ROOT auto-detect, split resolve, AMP GradScaler mới + grad-clip (hết crash scaler.update), tqdm progress + full metric/epoch.
 - **Caveat:** val fold 22 bn (~3 âm) → **CI rộng [0.67,1.0]**, spec bước 1/3, PR-AUC thổi phồng. Số baseline "thật" cần 5-fold CV gộp + slice-level + IRCADb.

@@ -53,10 +53,25 @@ def _curves(pdf, threshold, out_dir):
         frac, mean_pred = calibration_curve(y, s, n_bins=8, strategy="quantile")
         plt.figure(figsize=(4, 4)); plt.plot([0, 1], [0, 1], "--", color="gray")
         plt.plot(mean_pred, frac, "o-"); plt.xlabel("dự đoán"); plt.ylabel("thực tế")
-        plt.title("Calibration"); plt.tight_layout()
+        plt.title("Calibration (patient)"); plt.tight_layout()
         plt.savefig(os.path.join(out_dir, "calibration.png"), dpi=110); plt.close()
     except Exception as e:  # noqa: BLE001
         print("calibration skip:", e)
+
+
+def _slice_curves(labels, probs, out_dir):
+    """ROC/PR ở SLICE-level (nhiều mẫu → đường mượt, ổn định hơn patient)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from sklearn.metrics import PrecisionRecallDisplay, RocCurveDisplay
+
+    if len(np.unique(labels)) < 2:
+        return
+    RocCurveDisplay.from_predictions(labels, probs); plt.title("ROC (slice)")
+    plt.savefig(os.path.join(out_dir, "roc_slice.png"), dpi=110); plt.close()
+    PrecisionRecallDisplay.from_predictions(labels, probs); plt.title("PR (slice)")
+    plt.savefig(os.path.join(out_dir, "pr_slice.png"), dpi=110); plt.close()
 
 
 def main() -> None:
@@ -92,12 +107,13 @@ def main() -> None:
     threshold = args.threshold
     if threshold is None and args.split == "test":
         threshold = ck.get("val", {}).get("threshold")
-    rep = full_report(pid, p, lb, threshold=threshold, cfg=cfg["eval"])
+    rep = full_report(pid, p, lb, threshold=threshold, cfg=cfg["eval"], slice_bootstrap=True)
     out_dir = os.path.join(os.path.dirname(args.ckpt), f"eval_{args.split}")
     os.makedirs(out_dir, exist_ok=True)
     json.dump(rep, open(os.path.join(out_dir, "metrics.json"), "w"), indent=2)
     pdf = aggregate_patient(pid, p, lb, cfg["eval"]["patient_agg"], cfg["eval"]["topk"])
     _curves(pdf, rep["threshold"], out_dir)
+    _slice_curves(lb, p, out_dir)
 
     print(json.dumps({k: (round(v, 4) if isinstance(v, float) else v)
                       for k, v in rep.items()}, ensure_ascii=False, indent=2))
