@@ -75,7 +75,9 @@ def main() -> None:
     epochs = args.epochs or tr["epochs"]
     seed_everything(tr["seed"])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"arch={arch} fold={fold} epochs={epochs} device={device}")
+    ngpu = torch.cuda.device_count()
+    print(f"arch={arch} fold={fold} epochs={epochs} device={device} GPUs={ngpu} "
+          f"(dùng cuda:0; xem hướng dẫn dùng cả 2 GPU trong docs/W2_training_plan.md)")
 
     # ---- data ----
     manifest = pd.read_csv(resolve(root, cfg["data"]["manifest"]))
@@ -104,7 +106,11 @@ def main() -> None:
         return 0.5 * (1 + math.cos(math.pi * t))
 
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_scale)
-    scaler = torch.cuda.amp.GradScaler(enabled=tr["amp"] and device.type == "cuda")
+    amp_on = bool(tr["amp"]) and device.type == "cuda"
+    try:
+        scaler = torch.amp.GradScaler("cuda", enabled=amp_on)   # API mới (torch>=2.3)
+    except (AttributeError, TypeError):
+        scaler = torch.cuda.amp.GradScaler(enabled=amp_on)
     pw = ds_tr.pos_weight() if tr["pos_weight"] == "auto" else float(tr["pos_weight"])
     pos_weight = torch.tensor([pw], device=device)
     print(f"pos_weight={pw:.2f} loss={tr['loss']}")
@@ -144,7 +150,10 @@ def main() -> None:
                     loss = focal_loss(logit, y, tr["focal_gamma"], pos_weight)
                 else:
                     loss = F.binary_cross_entropy_with_logits(logit, y, pos_weight=pos_weight)
-            scaler.scale(loss).backward(); scaler.step(opt); scaler.update()
+            scaler.scale(loss).backward()
+            scaler.unscale_(opt)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)   # chống inf/nan (gradient clipping)
+            scaler.step(opt); scaler.update()
             run_loss += loss.item() * img.size(0); seen += img.size(0)
             if (bi + 1) % log_every == 0 or bi + 1 == nb:
                 pct = 100 * (bi + 1) / nb
