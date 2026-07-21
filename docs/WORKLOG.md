@@ -13,6 +13,11 @@
 
 ---
 
+## [2026-07-21 · Claude Code] — W2 training scaffold
+- **Done:** Pipeline train/eval config-driven, chạy Kaggle GPU. `src/data/dataset.py` (memmap dataset + Albumentations + patient split), `src/models/factory.py` (timm backbone + discriminative LR + freeze/unfreeze), `src/training/train.py` (AMP, cosine+warmup, BCE/Focal+pos_weight, early-stop theo **patient AUROC**, MLflow, best ckpt), `src/evaluation/metrics.py` (gộp patient mean-topk, AUROC/PR, Sens/Spec, threshold Youden/Sens-priority, **bootstrap CI mức bệnh nhân**), `evaluate.py` (ROC/PR/CM/calibration), `configs/train/base.yaml`, `notebooks/02_train_kaggle.ipynb`. Syntax OK.
+- **Next:** (nếu chưa) tạo dataset `lits-processed` → chạy `02_train_kaggle`: baseline **ResNet-50** fold0 (M2) → **ConvNeXt V2** → Pha 1 sàng lọc các backbone.
+- **Files:** configs/train/, src/{data,models,training,evaluation}/, notebooks/02_train_kaggle.ipynb, requirements.txt
+
 ## [2026-07-21 · Claude Code] — W1 data build DONE (Kaggle)
 - **Done:** Chạy full pipeline trên Kaggle. Attach 2 dataset (part1+part2) = 131 vol. Fix dọc đường: repo→public (git clone), cell4 dùng f-string. Build cache+manifest (**19,094 slice có gan**), audit → chốt **τ_area=20** (pos **37%**; patient **118 u / 13 không u**), split patient-level (**test=20, 5-fold, seed=42, hash 8647d40**), **leakage test 4/4 PASS**.
 - **Next:** Tạo Kaggle dataset `lits-processed`; commit `data/manifest.csv` + `data/splits/lits_v1.json`; bắt đầu **W2 (training)**.

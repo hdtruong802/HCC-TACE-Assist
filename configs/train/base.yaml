@@ -1,0 +1,44 @@
+# W2 training config — Liver Cancer AI
+# Đổi model.arch để so sánh (Comparison Protocol §3 spec sheet):
+#   resnet50 (baseline sàn) · convnextv2_nano / convnextv2_tiny (main) ·
+#   efficientnet_b0 · fastvit_sa12 · swinv2_tiny_window8_256 ...
+data:
+  processed_root: /kaggle/input/lits-processed   # images_u8.npy + manifest.csv + splits/
+  image_file: images_u8.npy
+  manifest: manifest.csv
+  split: splits/lits_v1.json
+  size: 256
+
+model:
+  arch: resnet50
+  pretrained: true
+  drop_rate: 0.1
+
+train:
+  fold: 0                    # 0..4 (StratifiedGroupKFold); -1 = train trên toàn trainval
+  epochs: 20
+  batch_size: 32            # giảm còn 16 nếu OOM
+  lr_head: 3.0e-4
+  lr_backbone: 1.0e-4       # discriminative LR (backbone < head)
+  weight_decay: 1.0e-4
+  loss: bce                 # bce (+pos_weight) | focal
+  pos_weight: auto          # auto = N_neg/N_pos trên train; hoặc số cụ thể
+  focal_gamma: 2.0
+  label_smoothing: 0.0
+  amp: true
+  scheduler: cosine
+  warmup_epochs: 1
+  freeze_backbone_epochs: 1 # freeze backbone vài epoch đầu (gradual unfreeze)
+  early_stopping: { monitor: val_auroc, patience: 5, mode: max }
+  num_workers: 2
+  seed: 42
+
+eval:
+  patient_agg: mean_topk    # mean_topk | max | mean
+  topk: 3
+  bootstrap_n: 2000
+  target_spec: 0.90
+
+output:
+  dir: /kaggle/working/outputs
+  mlflow: true
