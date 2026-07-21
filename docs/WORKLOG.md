@@ -13,6 +13,12 @@
 
 ---
 
+## [2026-07-21 · Claude Code] — W2 M2: baseline ResNet-50 chạy trọn ✅
+- **Done:** Train baseline **ResNet-50 fold0** trên Kaggle T4: hội tụ (loss 0.88→0.15), **best val patient-AUROC=0.895 @ep8** (early-stop ep13), PR-AUC~0.98. Pipeline train→eval→ckpt OK. Fix dọc đường: DATA_ROOT auto-detect, split resolve, AMP GradScaler mới + grad-clip (hết crash scaler.update), tqdm progress + full metric/epoch.
+- **Caveat:** val fold 22 bn (~3 âm) → **CI rộng [0.67,1.0]**, spec bước 1/3, PR-AUC thổi phồng. Số baseline "thật" cần 5-fold CV gộp + slice-level + IRCADb.
+- **Next:** ConvNeXt V2 (main) cùng fold0 → Pha 1 sàng lọc các backbone → chọn finalist.
+- **Files:** outputs/resnet50_fold0/ (ckpt+metrics) trên Kaggle.
+
 ## [2026-07-21 · Claude Code] — W2 training scaffold
 - **Done:** Pipeline train/eval config-driven, chạy Kaggle GPU. `src/data/dataset.py` (memmap dataset + Albumentations + patient split), `src/models/factory.py` (timm backbone + discriminative LR + freeze/unfreeze), `src/training/train.py` (AMP, cosine+warmup, BCE/Focal+pos_weight, early-stop theo **patient AUROC**, MLflow, best ckpt), `src/evaluation/metrics.py` (gộp patient mean-topk, AUROC/PR, Sens/Spec, threshold Youden/Sens-priority, **bootstrap CI mức bệnh nhân**), `evaluate.py` (ROC/PR/CM/calibration), `configs/train/base.yaml`, `notebooks/02_train_kaggle.ipynb`. Syntax OK.
 - **Next:** (nếu chưa) tạo dataset `lits-processed` → chạy `02_train_kaggle`: baseline **ResNet-50** fold0 (M2) → **ConvNeXt V2** → Pha 1 sàng lọc các backbone.
