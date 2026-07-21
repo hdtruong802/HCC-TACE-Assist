@@ -20,8 +20,8 @@ preprocess:
   cache_dtype: uint8            # 1 kênh; nở 3ch + normalize lúc train
 
 label_transfer:
-  # NGƯỠNG TẠM — CHỐT lại sau khi xem histogram trong data audit
-  tau_area: 10                  # tumor_area >= tau_area (px) → positive
+  # CHỐT sau audit (2026-07-21): pos_ratio 37%, lọc sliver u siêu nhỏ (<~2.5mm)
+  tau_area: 20                  # tumor_area >= tau_area (px) → positive
   tau_liver: 50                 # liver_area >= tau_liver (px) → slice có gan
   liver_label: 1
   tumor_label: 2
