@@ -15,7 +15,8 @@
 ## Chuyển nhãn (label transfer) — segmentation → phân loại slice
 - Mỗi slice: `liver_area = |seg∈{1,2}|`, `tumor_area = |seg==2|`.
 - `label = 1` nếu `tumor_area ≥ τ_area`; `= 0` nếu có gan (`liver_area ≥ τ_liver`) mà không đủ u; **loại** slice không đủ gan.
-- **τ tạm:** `τ_area=10px, τ_liver=50px` → **CHỐT lại sau audit** (xem `reports/data_audit_report.md`).
+- **τ CHỐT (sau audit 2026-07-21):** `τ_area=20px, τ_liver=50px`.
+- **Số liệu audit (full 131 ca):** 19,094 slice có gan · **pos 37%** (7079 pos / 12,015 neg) · patient: 118 có u / **13 không u** · median 133 slice/ca.
 
 ## Tiền xử lý (W1)
 Windowing gan WL=50/WW=350 → clip HU [−125,225] → scale [0,1] → **liver-ROI crop** (bbox mask gan + margin 16px) → resize **256×256** → cache **uint8 1 kênh** (nở 3ch + normalize lúc train). Orientation chuẩn RAS. Resample spacing: **tắt** (mặc định).
@@ -28,7 +29,7 @@ Windowing gan WL=50/WW=350 → clip HU [−125,225] → scale [0,1] → **liver-
 ## Hạn chế đã biết
 - **Nhãn suy từ mask** → nhiễu nhẹ với tổn thương nhỏ/isoattenuating.
 - LiTS gồm HCC **và di căn** → "positive" là *ác tính nói chung*, không thuần HCC; **không** phân biệt lành/ác.
-- **Ít bệnh nhân "gan bình thường"** (đa số ca LiTS có u) → negative ở *patient-level* khan hiếm; Specificity mức bệnh nhân cần diễn giải thận trọng (dựa thêm slice-level + IRCADb có ~25% ca không u).
+- **Ít bệnh nhân "gan bình thường"**: chỉ **13/131** ca không u → negative ở *patient-level* rất khan hiếm; **Specificity mức bệnh nhân sẽ có CI rất rộng** → ưu tiên diễn giải qua slice-level + external IRCADb (~25% ca không u). Cân nhắc coi slice-level AUC là headline phụ bên cạnh patient-level.
 - **Infer-time gap:** liver-crop lúc train dùng mask gan; lúc suy luận không có mask → cần heuristic/liver-localizer (backlog).
 - Mất cân bằng lớp ở slice-level (positive ≪ negative) → xử lý ở train (pos_weight/sampler/focal).
 
