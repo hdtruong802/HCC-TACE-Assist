@@ -13,6 +13,12 @@
 
 ---
 
+## [2026-07-21 · Claude Code] — W1 data build DONE (Kaggle)
+- **Done:** Chạy full pipeline trên Kaggle. Attach 2 dataset (part1+part2) = 131 vol. Fix dọc đường: repo→public (git clone), cell4 dùng f-string. Build cache+manifest (**19,094 slice có gan**), audit → chốt **τ_area=20** (pos **37%**; patient **118 u / 13 không u**), split patient-level (**test=20, 5-fold, seed=42, hash 8647d40**), **leakage test 4/4 PASS**.
+- **Next:** Tạo Kaggle dataset `lits-processed`; commit `data/manifest.csv` + `data/splits/lits_v1.json`; bắt đầu **W2 (training)**.
+- **Caveat:** chỉ 13/131 ca không u → Specificity patient-level CI rộng (dựa thêm slice-level + IRCADb).
+- **Files:** manifest/split (Kaggle output), DATA_CARD cập nhật số liệu.
+
 ## [2026-07-21 · Claude Code]
 - **Done:** Scaffold pipeline data W1 (Bước 0). Tạo `configs/data/lits.yaml`, `src/data/{io,preprocess,label_transfer,audit}.py`, `scripts/{build_manifest,make_split}.py`, `tests/test_leakage.py`, `notebooks/01_data_kaggle.ipynb`, `DATA_CARD.md`, `requirements.txt`. Đã test logic split+leakage (synthetic → PASS); syntax/JSON/YAML hợp lệ.
 - **Decisions:** Dùng dataset Kaggle có sẵn `andrewmvd/liver-tumor-segmentation` (bỏ tải CodaLab). Chốt: 256px · liver-crop ON · cache uint8 1-kênh · τ tạm 10/50 (chốt sau audit) · bỏ 70 vol test.
