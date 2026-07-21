@@ -19,7 +19,7 @@
 - **Số liệu audit (full 131 ca):** 19,094 slice có gan · **pos 37%** (7079 pos / 12,015 neg) · patient: 118 có u / **13 không u** · median 133 slice/ca.
 
 ## Tiền xử lý (W1)
-Windowing gan WL=50/WW=350 → clip HU [−125,225] → scale [0,1] → **liver-ROI crop** (bbox mask gan + margin 16px) → resize **256×256** → cache **uint8 1 kênh** (nở 3ch + normalize lúc train). Orientation chuẩn RAS. Resample spacing: **tắt** (mặc định).
+Windowing gan WL=50/WW=350 → clip HU [−125,225] → scale [0,1] → **liver-ROI crop** (bbox mask gan + margin 16px) → resize **256×256** → cache gộp **1 file `images_u8.npy`** shape `[N,256,256]` uint8 (memmap; manifest có cột `row` trỏ vào mảng; nở 3ch + normalize lúc train). Orientation chuẩn RAS. Resample spacing: **tắt** (mặc định).
 
 ## Chia dữ liệu
 - **Patient-level** StratifiedGroupKFold (k=5, group=`patient_id`) + hold-out internal test 15%, seed=42.
@@ -34,4 +34,4 @@ Windowing gan WL=50/WW=350 → clip HU [−125,225] → scale [0,1] → **liver-
 - Mất cân bằng lớp ở slice-level (positive ≪ negative) → xử lý ở train (pos_weight/sampler/focal).
 
 ## Tái lập
-Seed cố định; checksum file raw (khi tải từ CodaLab); config-driven (`configs/data/lits.yaml`); manifest lưu `cache_path` **tương đối** + `spacing/thickness` để truy vết.
+Seed cố định; config-driven (`configs/data/lits.yaml`); manifest lưu `row`/`image_file` + `liver_area_px`/`tumor_area_px` + `spacing/thickness` để truy vết & re-label không cần re-cache.

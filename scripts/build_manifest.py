@@ -1,8 +1,10 @@
-"""Sinh cache slice (uint8) + manifest.csv cho LiTS. Chạy trên Kaggle (CPU).
+"""Sinh cache ảnh (1 file .npy gộp, memmap) + manifest.csv cho LiTS. Chạy trên Kaggle (CPU).
+
+Cache = 1 file duy nhất `images_u8.npy` shape [N,256,256] uint8 (dễ upload + memmap nhanh cho train),
+thay vì hàng chục nghìn .npy nhỏ (upload dataset hay lỗi). Manifest có cột `row` trỏ vào mảng.
 
 Ví dụ:
-    python scripts/build_manifest.py --data-root /kaggle/input/liver-tumor-segmentation \
-        --out-dir /kaggle/working [--limit 3]
+    python scripts/build_manifest.py --data-root /kaggle/input --out-dir /kaggle/working [--limit 3]
 """
 from __future__ import annotations
 
@@ -24,6 +26,8 @@ from src.data.io import discover_pairs, load_pair  # noqa: E402
 from src.data.label_transfer import EXCLUDE, make_label, slice_areas  # noqa: E402
 from src.data.preprocess import crop_resize, liver_bbox, window_ct  # noqa: E402
 
+IMAGE_FILE = "images_u8.npy"
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -41,8 +45,7 @@ def main() -> None:
     tau_area, tau_liver = lt["tau_area"], lt["tau_liver"]
     ll, tl = lt["liver_label"], lt["tumor_label"]
 
-    cache_dir = os.path.join(args.out_dir, paths["cache_dir"])
-    os.makedirs(cache_dir, exist_ok=True)
+    os.makedirs(args.out_dir, exist_ok=True)
 
     pairs = discover_pairs(data_root, cfg["dataset"]["volume_glob"], cfg["dataset"]["seg_glob"])
     if args.limit:
@@ -51,6 +54,7 @@ def main() -> None:
     if not pairs:
         raise SystemExit("Không tìm thấy cặp nào — kiểm tra DATA_ROOT / glob trong config.")
 
+    images: list[np.ndarray] = []
     rows = []
     for pi, pair in enumerate(pairs):
         try:
@@ -59,8 +63,6 @@ def main() -> None:
             print(f"[SKIP] {pair.patient_id}: lỗi đọc {e}")
             continue
         bbox = liver_bbox(seg, ll, tl, margin) if do_crop else None
-        pdir = os.path.join(cache_dir, pair.patient_id)
-        os.makedirs(pdir, exist_ok=True)
         kept = 0
         for z in range(vol.shape[2]):
             liver_area, tumor_area = slice_areas(seg[:, :, z], ll, tl)
@@ -68,29 +70,32 @@ def main() -> None:
             if label == EXCLUDE:
                 continue
             img = crop_resize(window_ct(vol[:, :, z], wl, ww), bbox, size)
-            rel = os.path.join(paths["cache_dir"], pair.patient_id, f"{z:04d}.npy")
-            np.save(os.path.join(args.out_dir, rel), img)
             rows.append(
                 dict(
-                    patient_id=pair.patient_id, slice_idx=z, cache_path=rel,
-                    liver_area_px=liver_area, tumor_area_px=tumor_area,
+                    patient_id=pair.patient_id, slice_idx=z, row=len(images),
+                    image_file=IMAGE_FILE, liver_area_px=liver_area, tumor_area_px=tumor_area,
                     has_liver=1, label=label,
                     spacing=round(spacing[0], 4), thickness=round(spacing[2], 4),
                 )
             )
+            images.append(img)
             kept += 1
-        print(f"[{pi + 1}/{len(pairs)}] {pair.patient_id}: {kept} slice có gan")
+        print(f"[{pi + 1}/{len(pairs)}] {pair.patient_id}: {kept} slice có gan (tổng {len(images)})")
 
+    if not images:
+        raise SystemExit("Không có slice nào được giữ — kiểm tra τ / mask.")
+
+    arr = np.stack(images).astype(np.uint8)          # [N,256,256]
+    np.save(os.path.join(args.out_dir, IMAGE_FILE), arr)
     df = pd.DataFrame(rows)
-    man_path = os.path.join(args.out_dir, paths["manifest"])
-    df.to_csv(man_path, index=False)
+    df.to_csv(os.path.join(args.out_dir, paths["manifest"]), index=False)
 
     pos = int((df.label == 1).sum())
-    print(f"\nManifest: {man_path}  rows={len(df)}  patients={df.patient_id.nunique()}")
+    print(f"\nẢnh gộp: {IMAGE_FILE}  shape={arr.shape}  ({arr.nbytes / 1e6:.0f} MB)")
+    print(f"Manifest: rows={len(df)}  patients={df.patient_id.nunique()}")
     print(f"Slice: positive={pos}  negative={len(df) - pos}  pos_ratio={pos / max(1, len(df)):.3f}")
-    if len(df):
-        ppat = df.groupby("patient_id").label.max()
-        print(f"Patient: pos={int((ppat == 1).sum())}/{len(ppat)}  neg={int((ppat == 0).sum())}")
+    ppat = df.groupby("patient_id").label.max()
+    print(f"Patient: pos={int((ppat == 1).sum())}/{len(ppat)}  neg={int((ppat == 0).sum())}")
 
 
 if __name__ == "__main__":

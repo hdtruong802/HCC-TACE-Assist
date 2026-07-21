@@ -47,11 +47,13 @@ def tumor_area_hist(df: pd.DataFrame, out_png: str = "reports/tumor_area_hist.pn
 
 def qc_montage(df: pd.DataFrame, cache_root: str, n: int = 24,
                out_png: str = "reports/qc_montage.png", seed: int = 42) -> str:
-    """Lưới ảnh mẫu (từ cache) để mắt thường kiểm nhãn."""
+    """Lưới ảnh mẫu (từ mảng gộp images_u8.npy, memmap) để mắt thường kiểm nhãn."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    image_file = df.image_file.iloc[0] if "image_file" in df.columns else "images_u8.npy"
+    arr = np.load(os.path.join(cache_root, image_file), mmap_mode="r")
     sample = df.sample(min(n, len(df)), random_state=seed)
     cols = 6
     rows = int(np.ceil(len(sample) / cols))
@@ -59,7 +61,7 @@ def qc_montage(df: pd.DataFrame, cache_root: str, n: int = 24,
     fig, axes = plt.subplots(rows, cols, figsize=(cols * 2, rows * 2))
     flat = np.array(axes).ravel()
     for ax, (_, r) in zip(flat, sample.iterrows()):
-        img = np.load(os.path.join(cache_root, r.cache_path))
+        img = arr[int(r.row)]
         ax.imshow(img, cmap="gray")
         ax.set_title(f"{r.patient_id} L{int(r.label)}", fontsize=7)
         ax.axis("off")
