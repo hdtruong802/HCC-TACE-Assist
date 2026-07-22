@@ -36,6 +36,7 @@ def main() -> None:
     ap.add_argument("--ircad-config", default="configs/data/ircad.yaml")
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--data-root", default=None, help="nơi chứa manifest_ircad.csv + images_u8_ircad.npy")
+    ap.add_argument("--out", default=None, help="thư mục ghi kết quả (mặc định cạnh ckpt; đặt /kaggle/working nếu ckpt ở input chỉ-đọc)")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(open(args.config, encoding="utf-8"))
@@ -72,7 +73,7 @@ def main() -> None:
     rep["_ckpt"] = os.path.abspath(args.ckpt)
     rep["_arch"] = ck["arch"]
 
-    out_dir = os.path.join(os.path.dirname(args.ckpt), "eval_ircad")
+    out_dir = args.out or os.path.join(os.path.dirname(args.ckpt), "eval_ircad")
     os.makedirs(out_dir, exist_ok=True)
     json.dump(rep, open(os.path.join(out_dir, "metrics.json"), "w"), indent=2)
     pdf = aggregate_patient(pid, p, lb, cfg["eval"]["patient_agg"], cfg["eval"]["topk"])
