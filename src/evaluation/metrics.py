@@ -99,8 +99,12 @@ def bootstrap_slice_auc(patient_ids, probs, labels, n: int = 2000, seed: int = 4
     return {"slice_auroc_mean": float(np.mean(vals)), "slice_ci_low": float(lo), "slice_ci_high": float(hi)}
 
 
-def full_report(patient_ids, probs, labels, threshold=None, cfg=None, slice_bootstrap=False) -> dict:
-    """Metric cả PATIENT-level và SLICE-level. threshold=None → tự chọn (Youden) cho patient."""
+def full_report(patient_ids, probs, labels, threshold=None, cfg=None, slice_bootstrap=False,
+                slice_threshold=None) -> dict:
+    """Metric cả PATIENT-level và SLICE-level.
+
+    threshold=None → tự chọn (Youden) cho patient; slice_threshold=None → Youden cho slice.
+    External test: TRUYỀN threshold + slice_threshold đã KHÓA trên val (không tự tinh chỉnh)."""
     cfg = cfg or {}
     target = cfg.get("target_spec", 0.90)
     boot = cfg.get("bootstrap_n", 2000)
@@ -121,7 +125,12 @@ def full_report(patient_ids, probs, labels, threshold=None, cfg=None, slice_boot
 
     # ---- slice-level (ổn định hơn: nhiều slice âm; CI theo cluster-bootstrap bệnh nhân) ----
     probs = np.asarray(probs); labels = np.asarray(labels)
-    thr_sl = choose_threshold(labels, probs, "youden") if len(np.unique(labels)) > 1 else 0.5
+    if slice_threshold is not None:
+        thr_sl = float(slice_threshold)
+    elif len(np.unique(labels)) > 1:
+        thr_sl = choose_threshold(labels, probs, "youden")
+    else:
+        thr_sl = 0.5
     sm = point_metrics(labels, probs, thr_sl)
     rep.update({
         "slice_n": int(len(labels)), "slice_pos": int((labels == 1).sum()),

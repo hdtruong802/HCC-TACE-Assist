@@ -1,5 +1,6 @@
 # W1 data pipeline (Kaggle/Colab đã có sẵn phần lớn; cài bổ sung nếu thiếu)
 nibabel>=5.0
+pydicom>=2.3          # đọc external 3D-IRCADb-01 (DICOM)
 numpy
 pandas
 scikit-learn>=1.0

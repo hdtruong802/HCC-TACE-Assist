@@ -13,6 +13,13 @@
 
 ---
 
+## [2026-07-22 · Claude Code] — External 3D-IRCADb-01 pipeline (reality-check gate #2)
+- **Done:** Dựng pipeline external validation. `src/data/ircad_ingest.py` (đọc DICOM: PATIENT_DICOM + MASKS_DICOM/{liver,livertumor*} → volume HU + seg 0/1/2 giống LiTS, dò cấu trúc đệ quy, align mask theo InstanceNumber). `scripts/build_ircad.py` (tái dùng NGUYÊN preprocess/label-transfer W1 → `images_u8_ircad.npy` + `manifest_ircad.csv` cùng format LiTS). `src/evaluation/eval_external.py` (suy luận + `full_report` với **threshold KHÓA từ val**). Mở rộng `metrics.full_report(slice_threshold=...)` để external không tự tinh chỉnh ngưỡng. Thêm cell 7–9 vào `notebooks/02_train_kaggle.ipynb` (verify cấu trúc → build → eval + curves). `configs/data/ircad.yaml`, `requirements.txt`+pydicom. Compile OK (chạy trên Kaggle).
+- **Decisions:** Dataset external Kaggle = `sarahelqersh/3dircadb1` (user tìm). Đặt cell external TRONG notebook 02 (cùng session train) để dùng luôn checkpoint — tránh mất khi đổi session. IRCADb có ca ÂM thật → Specificity giờ mới có nghĩa. Chạm **1 LẦN**, không tinh chỉnh.
+- **Caveat:** xử lý DICOM ở orientation gốc (không reorient RAS như LiTS) → nếu external tệ bất thường, kiểm tra orientation trước khi kết luận. τ=20/50 áp cho IRCADb (label-transfer khác annotator).
+- **Next:** Bạn Add Data `sarahelqersh/3dircadb1` vào notebook 02 → chạy cell 7 (verify) → 8 (build) → 9 (eval). Gửi metrics.json + roc_slice/roc để cùng đánh giá generalization. Tốt → viết report external; kém → xét orientation/đổi-augment data.
+- **Files:** src/data/ircad_ingest.py, scripts/build_ircad.py, src/evaluation/eval_external.py, src/evaluation/metrics.py, configs/data/ircad.yaml, notebooks/02_train_kaggle.ipynb, requirements.txt
+
 ## [2026-07-22 · Claude Code] — Grad-CAM sanity (reality-check gate #1)
 - **Done:** Thêm `src/interpretability/gradcam.py` — Grad-CAM generic cho mọi backbone timm (dùng `forward_features`→`forward_head`, không phụ thuộc tên layer). Xuất montage overlay theo nhóm **TP / FP / FN** (mỗi nhóm n ví dụ, chọn theo độ tự tin) để soi định tính model bám ổ tổn thương hay "shortcut". Thêm cell 6 vào `notebooks/02_train_kaggle.ipynb` (chạy trên `convnextv2_nano_fold0/best.ckpt`, hiển thị + hướng dẫn đọc). Compile OK (local không có torch → chạy trên Kaggle).
 - **Decisions:** Đây là **cửa kiểm chứng #1** trước khi quyết Pha 2 / nâng cấp detect+classify. Lưu ý ghi trong docstring: cache đã liver-crop nên check là "heat có đúng ổ u trong gan" (không có mask u trong cache → định tính). Cửa #2 = external IRCADb.
