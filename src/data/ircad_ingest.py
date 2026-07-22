@@ -38,15 +38,30 @@ def _num(name: str) -> int:
     return int(m[-1]) if m else 10 ** 9
 
 
+def _unwrap(d: str, depth: int = 5) -> str:
+    """Bóc tầng lồng thừa cùng tên (vd PATIENT_DICOM/PATIENT_DICOM/…) tới nơi có nội dung thật."""
+    cur = d
+    for _ in range(depth):
+        try:
+            entries = os.listdir(cur)
+        except OSError:
+            break
+        if len(entries) == 1 and os.path.isdir(os.path.join(cur, entries[0])):
+            cur = os.path.join(cur, entries[0])          # bọc 1 thư mục con → đi xuống
+            continue
+        break
+    return cur
+
+
 def discover_patients(data_root: str) -> list[IrcadPatient]:
-    """Tìm mọi thư mục bệnh nhân qua vị trí PATIENT_DICOM (không phụ thuộc độ sâu)."""
-    seen: dict[str, str] = {}
+    """Bệnh nhân = thư mục có CẢ PATIENT_DICOM lẫn MASKS_DICOM (loại trùng do nesting)."""
+    roots: dict[str, str] = {}
     for p in glob.glob(os.path.join(data_root, "**", "PATIENT_DICOM"), recursive=True):
-        pdir = os.path.dirname(p)
-        pid = os.path.basename(pdir)                 # 3Dircadb1.<n>
-        seen.setdefault(pid, pdir)
-    out = [IrcadPatient(patient_id=f"ircad-{_num(pid)}", root=pdir)
-           for pid, pdir in seen.items()]
+        parent = os.path.dirname(p)
+        if os.path.isdir(os.path.join(parent, "MASKS_DICOM")):
+            roots.setdefault(os.path.abspath(parent), os.path.basename(parent))
+    out = [IrcadPatient(patient_id=f"ircad-{_num(name)}", root=root)
+           for root, name in roots.items()]
     return sorted(out, key=lambda p: _num(p.patient_id))
 
 
@@ -107,8 +122,8 @@ def _read_mask_aligned(folder: str, inst_order, shape_hw) -> np.ndarray:
 
 
 def _mask_dirs(patient_root: str):
-    """Trả (liver_dir | None, [tumor_dirs]) từ MASKS_DICOM."""
-    md = os.path.join(patient_root, "MASKS_DICOM")
+    """Trả (liver_dir | None, [tumor_dirs]) từ MASKS_DICOM (đã bóc tầng lồng thừa)."""
+    md = _unwrap(os.path.join(patient_root, "MASKS_DICOM"))
     if not os.path.isdir(md):
         return None, []
     liver_dir, tumor_dirs = None, []
@@ -118,15 +133,15 @@ def _mask_dirs(patient_root: str):
             continue
         low = name.lower()
         if low == "liver":
-            liver_dir = full
+            liver_dir = _unwrap(full)
         elif low.startswith("livertumor") or ("tumor" in low and "liver" in low):
-            tumor_dirs.append(full)
+            tumor_dirs.append(_unwrap(full))
     return liver_dir, tumor_dirs
 
 
 def load_patient(p: IrcadPatient):
     """Trả (vol[H,W,Z] HU, seg[H,W,Z] {0,1,2}, spacing, has_tumor_folder)."""
-    vol, inst, spacing = _read_ct(os.path.join(p.root, "PATIENT_DICOM"))
+    vol, inst, spacing = _read_ct(_unwrap(os.path.join(p.root, "PATIENT_DICOM")))
     H, W, _ = vol.shape
     liver_dir, tumor_dirs = _mask_dirs(p.root)
     liver = _read_mask_aligned(liver_dir, inst, (H, W)) if liver_dir else np.zeros_like(vol, bool)
