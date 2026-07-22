@@ -65,16 +65,35 @@ def gradcam_map(model, x, size):
     return cam / m if m > 1e-8 else cam, float(torch.sigmoid(logit).item())
 
 
-def _pick(df, probs, thr, n_per):
-    """Chọn chỉ số slice theo nhóm TP / FP / FN (theo ngưỡng slice)."""
+def _diversify(cands, pids, n_per, cap):
+    """Lấy tối đa `cap` slice/bệnh nhân theo thứ tự đã sort; thiếu thì bù bằng phần còn lại."""
+    seen, chosen, chosen_set = {}, [], set()
+    for i in cands:
+        if seen.get(pids[i], 0) < cap:
+            chosen.append(i); chosen_set.add(i); seen[pids[i]] = seen.get(pids[i], 0) + 1
+        if len(chosen) >= n_per:
+            return np.array(chosen, dtype=int)
+    for i in cands:                                  # bù nếu không đủ bệnh nhân khác nhau
+        if i not in chosen_set:
+            chosen.append(i)
+            if len(chosen) >= n_per:
+                break
+    return np.array(chosen[:n_per], dtype=int)
+
+
+def _pick(df, probs, thr, n_per, cap=1):
+    """Chọn chỉ số slice theo nhóm TP / FP / FN, đa dạng theo bệnh nhân (cap slice/bn)."""
     y = df.label.values.astype(int)
+    pids = df.patient_id.values
     tp = np.where((y == 1) & (probs >= thr))[0]
     fp = np.where((y == 0) & (probs >= thr))[0]
     fn = np.where((y == 1) & (probs < thr))[0]
-    tp = tp[np.argsort(-probs[tp])][:n_per]          # dương đúng, tự tin nhất
-    fp = fp[np.argsort(-probs[fp])][:n_per]          # âm bị kêu dương, tự tin nhất
-    fn = fn[np.argsort(probs[fn])][:n_per]           # u bị bỏ sót "chắc" nhất
-    return {"TP": tp, "FP": fp, "FN": fn}
+    tp = tp[np.argsort(-probs[tp])]                  # dương đúng, tự tin nhất
+    fp = fp[np.argsort(-probs[fp])]                  # âm bị kêu dương, tự tin nhất
+    fn = fn[np.argsort(probs[fn])]                   # u bị bỏ sót "chắc" nhất
+    return {"TP": _diversify(tp, pids, n_per, cap),
+            "FP": _diversify(fp, pids, n_per, cap),
+            "FN": _diversify(fn, pids, n_per, cap)}
 
 
 def _overlay(ax, raw_u8, cam, title):
@@ -92,6 +111,7 @@ def main() -> None:
     ap.add_argument("--split", choices=["val", "test"], default="val")
     ap.add_argument("--fold", type=int, default=0)
     ap.add_argument("--n-per", type=int, default=6, help="số ví dụ mỗi nhóm TP/FP/FN")
+    ap.add_argument("--cap", type=int, default=1, help="tối đa số slice/bệnh nhân mỗi nhóm (đa dạng hoá)")
     ap.add_argument("--threshold", type=float, default=None, help="mặc định: slice_threshold từ ckpt")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
@@ -123,7 +143,7 @@ def main() -> None:
     thr = args.threshold
     if thr is None:
         thr = ck.get("val", {}).get("slice_threshold", 0.5)
-    groups = _pick(ds.df, probs, thr, args.n_per)
+    groups = _pick(ds.df, probs, thr, args.n_per, args.cap)
     print(f"{args.split}: {len(ds)} slice | thr={thr:.3f} | "
           f"TP={len(groups['TP'])} FP={len(groups['FP'])} FN={len(groups['FN'])}")
 
