@@ -13,6 +13,12 @@
 
 ---
 
+## [2026-07-22 · Claude Code] — Tầng 2: classifier 7 lớp (split + dataset đa thì + train/eval)
+- **Done:** QC mask PASS (ROI bám đúng tổn thương 6/7 lớp rõ). Viết trọn pipeline phân loại: `scripts/make_split_lld.py` (patient-level StratifiedKFold 5 + hold-out, leakage assert), `src/data/lld_dataset.py` (gom 8 thì → tensor [K,H,W], aug flip/rot, thì thiếu=kênh 0), `factory.build_classifier` (timm in_chans=K, đa lớp), `src/evaluation/metrics_cls.py` (macro-F1 + balanced-acc + per-class + confusion + **malignant-AUC** nhị phân, bootstrap CI bệnh nhân), `src/training/train_cls.py` (CE + class-weight auto + discriminative LR + cosine + AMP, chọn best macro-F1), `src/evaluation/evaluate_cls.py` (+confusion png), `configs/train/lld_cls.yaml`, `notebooks/03_lld_kaggle.ipynb` (1 clone→7 eval). Compile OK.
+- **Decisions:** MVP = **đa thì channel-stack (in_chans=8)**, 1 bệnh nhân=1 mẫu; malignant={1,3,6}. Chưa làm two-stage detect→classify + oracle-vs-predicted (bước sau, sau khi có baseline classify).
+- **Next:** Bạn chạy notebook 03: build → make_split → train fold0 → eval. Gửi macro-F1/per-class/confusion + malignant-AUC. Rồi mình: (a) tinh chỉnh (fusion/late-fusion, single-phase baseline), (b) dựng stage-1 detect trên MRI → oracle-vs-predicted ROI.
+- **Files:** scripts/make_split_lld.py, src/data/lld_dataset.py, src/models/factory.py, src/evaluation/{metrics_cls,evaluate_cls}.py, src/training/train_cls.py, configs/train/lld_cls.yaml, notebooks/03_lld_kaggle.ipynb
+
 ## [2026-07-22 · Claude Code] — Tầng 2 scaffold: LLD-MMRI ingestion + QC
 - **Done:** Verify LLD-MMRI (HF `wanglab/LLD-MMRI-MedSAM2`, lưu Kaggle `marcohoang/lld-mmri-dataset`): **498 bn, mỗi bn 1 tổn thương/1 nhãn/8 thì**; 7 lớp (0 hemangioma…6 HCC), Benign{0,2,4,5}/Malignant{1,3,6} → **266 ác / 232 lành**; bbox `2D_box` per-slice (pixel). Viết `src/data/lld_ingest.py` (đọc annotation + ROI theo bbox, **tự dò trục qua-lát = trục nhỏ nhất** để chống lỗi orientation, robust-u8 cho MRI), `configs/data/lld.yaml`, `scripts/qc_lld.py` (overlay bbox — QC trước build), `scripts/build_lld.py` (cache ROI [N,256,256] + manifest per bn×thì). Compile OK.
 - **Decisions:** ROI-classify per (bệnh nhân × thì); nhãn 7 lớp + cột nhị phân malignant. Chưa chốt fusion đa thì (channel-stack vs late-fusion) — quyết sau QC + baseline.

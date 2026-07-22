@@ -1,0 +1,40 @@
+# Tầng 2 — phân loại 7 lớp tổn thương gan (LLD-MMRI, MRI đa thì)
+data:
+  processed_root: /kaggle/working        # nơi có images_u8_lld.npy + manifest_lld.csv + splits/
+  image_file: images_u8_lld.npy
+  manifest: manifest_lld.csv
+  split: splits/lld_v1.json
+  size: 256
+  phases: ["C-pre", "C+A", "C+V", "C+Delay", "T2WI", "DWI", "InPhase", "OutPhase"]  # thứ tự kênh
+
+model:
+  arch: convnextv2_nano
+  pretrained: true
+  drop_rate: 0.1
+  num_classes: 7
+
+train:
+  fold: 0
+  epochs: 40
+  batch_size: 16
+  lr_head: 3.0e-4
+  lr_backbone: 1.0e-4
+  weight_decay: 1.0e-4
+  class_weight: auto            # auto = cân bằng nghịch tần suất (mất cân bằng 7 lớp)
+  label_smoothing: 0.05
+  amp: true
+  scheduler: cosine
+  warmup_epochs: 2
+  freeze_backbone_epochs: 2
+  select_metric: macro_f1       # metric chọn best-ckpt/early-stop
+  early_stopping: { patience: 8 }
+  num_workers: 2
+  seed: 42
+
+eval:
+  malignant: [1, 3, 6]          # ICC / di căn / HCC → nhánh nhị phân lành-ác
+  bootstrap_n: 1000
+
+output:
+  dir: /kaggle/working/outputs_cls
+  mlflow: false

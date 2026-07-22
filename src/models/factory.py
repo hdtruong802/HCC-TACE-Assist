@@ -6,8 +6,17 @@ import torch.nn as nn
 
 
 def build_model(arch: str, pretrained: bool = True, drop_rate: float = 0.0) -> nn.Module:
-    """Backbone timm bất kỳ, 1 logit đầu ra (binary)."""
+    """Backbone timm bất kỳ, 1 logit đầu ra (binary — Tầng 1 phát hiện)."""
     return timm.create_model(arch, pretrained=pretrained, num_classes=1, drop_rate=drop_rate)
+
+
+def build_classifier(arch: str, num_classes: int, in_chans: int = 3,
+                     pretrained: bool = True, drop_rate: float = 0.0) -> nn.Module:
+    """Backbone timm đa lớp, `in_chans` kênh (Tầng 2 — phân loại đa thì MRI).
+
+    timm tự thích ứng trọng số conv1 khi in_chans != 3 (lặp/chia trung bình)."""
+    return timm.create_model(arch, pretrained=pretrained, num_classes=num_classes,
+                             in_chans=in_chans, drop_rate=drop_rate)
 
 
 def param_groups(model: nn.Module, lr_head: float, lr_backbone: float, weight_decay: float):
