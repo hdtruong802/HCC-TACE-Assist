@@ -13,6 +13,12 @@
 
 ---
 
+## [2026-07-22 · Claude Code] — Grad-CAM sanity (reality-check gate #1)
+- **Done:** Thêm `src/interpretability/gradcam.py` — Grad-CAM generic cho mọi backbone timm (dùng `forward_features`→`forward_head`, không phụ thuộc tên layer). Xuất montage overlay theo nhóm **TP / FP / FN** (mỗi nhóm n ví dụ, chọn theo độ tự tin) để soi định tính model bám ổ tổn thương hay "shortcut". Thêm cell 6 vào `notebooks/02_train_kaggle.ipynb` (chạy trên `convnextv2_nano_fold0/best.ckpt`, hiển thị + hướng dẫn đọc). Compile OK (local không có torch → chạy trên Kaggle).
+- **Decisions:** Đây là **cửa kiểm chứng #1** trước khi quyết Pha 2 / nâng cấp detect+classify. Lưu ý ghi trong docstring: cache đã liver-crop nên check là "heat có đúng ổ u trong gan" (không có mask u trong cache → định tính). Cửa #2 = external IRCADb.
+- **Next:** Bạn chạy cell 6 trên Kaggle (model tốt nhất ConvNeXt V2) → tải `gradcam_val.png` về `image_eval/convnextv2_nano/`. Nếu heat hợp lý → dựng pipeline external IRCADb; nếu shortcut → xem lại preprocessing/label trước khi đổi/augment data.
+- **Files:** src/interpretability/{__init__,gradcam}.py, notebooks/02_train_kaggle.ipynb
+
 ## [2026-07-21 · Claude Code] — W2 Pha 1: sàng lọc 4 backbone (fold 0)
 - **Done:** Train+eval 4 backbone (fold 0, slice-selected). Xếp hạng **slice-AUROC**: ConvNeXt V2 nano **0.882 [0.815,0.921]** > FastViT sa12 **0.874 [0.815,0.917]** > ResNet-50 (baseline) 0.837 [0.757,0.892] > EfficientNet-B0 0.826 [0.745,0.881]. Báo cáo: `report/T3_W2_Phase1.md`.
 - **Decisions:** Finalist Pha 2 = **ConvNeXt V2 + FastViT** (+ ResNet-50 anchor); loại EfficientNet-B0. Nghịch lý minh hoạ: ConvNeXt slice cao nhất nhưng patient thấp nhất → khẳng định dùng slice-level. Mọi model hiện đại overfit nhanh (best ep 2–4) → Pha 2 tăng regularization.
