@@ -87,7 +87,7 @@ def load_slice(nii_path: str, slice_idx: int):
 
 
 def crop_roi(slice2d: np.ndarray, box, margin: float, size: int, transpose: bool):
-    """Cắt ROI quanh bbox (nới margin theo tỉ lệ cạnh) rồi resize size×size, robust-u8."""
+    """[bbox-JSON, dự phòng] Cắt ROI quanh bbox rồi resize size×size, robust-u8."""
     import cv2
 
     _, x0, y0, x1, y1 = box
@@ -101,3 +101,42 @@ def crop_roi(slice2d: np.ndarray, box, margin: float, size: int, transpose: bool
         roi = sl
     roi = _robust_u8(roi)
     return cv2.resize(roi, (size, size), interpolation=cv2.INTER_AREA)
+
+
+# ================= ROI từ MASK MedSAM2 (khuyến nghị — cùng không gian với ảnh) =================
+def find_mask(labels_dir: str, patient: str, phase_suffix: str) -> str | None:
+    """Mask cùng (bệnh nhân, thì): labels/MR-<id>_<study>_<suffix>.nii (không có _0000)."""
+    hits = glob.glob(os.path.join(labels_dir, f"{patient}_*_{phase_suffix}.nii*"))
+    return sorted(hits)[0] if hits else None
+
+
+def _z_axis(shape) -> int:
+    return int(np.argmin(shape))
+
+
+def mask_roi(image_path: str, mask_path: str, margin: float, size: int):
+    """ROI = bbox vùng mask>0 trên lát có DIỆN TÍCH mask lớn nhất. Không lo trục vì mask cùng
+    hệ mảng với ảnh. Trả (roi_u8[size,size], slice_idx, (x0,y0,x1,y1), mask_area) hoặc None."""
+    import cv2
+    import nibabel as nib
+
+    img = np.asanyarray(nib.load(image_path).dataobj)
+    msk = np.asanyarray(nib.load(mask_path).dataobj)
+    if img.shape != msk.shape:
+        return None
+    za = _z_axis(img.shape)
+    other = tuple(a for a in range(msk.ndim) if a != za)
+    areas = (msk > 0).sum(axis=other)
+    if int(areas.max()) == 0:
+        return None
+    zi = int(np.argmax(areas))
+    m2 = np.take(msk > 0, zi, axis=za)
+    i2 = np.take(img, zi, axis=za)
+    ys, xs = np.where(m2)
+    y0, y1, x0, x1 = int(ys.min()), int(ys.max()) + 1, int(xs.min()), int(xs.max()) + 1
+    bh, bw = (y1 - y0), (x1 - x0)
+    y0 = int(max(0, y0 - margin * bh)); y1 = int(min(m2.shape[0], y1 + margin * bh))
+    x0 = int(max(0, x0 - margin * bw)); x1 = int(min(m2.shape[1], x1 + margin * bw))
+    roi = _robust_u8(i2[y0:y1, x0:x1])
+    roi = cv2.resize(roi, (size, size), interpolation=cv2.INTER_AREA)
+    return roi, zi, (x0, y0, x1, y1), int(areas[zi])
