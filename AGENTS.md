@@ -6,22 +6,37 @@
 ## Dự án là gì
 AI phát hiện tổn thương ung thư gan trên ảnh CT — **công cụ nghiên cứu/hỗ trợ (Research Use Only, chưa kiểm định lâm sàng)**. Nhân sự: 1 kỹ sư + AI agents · thời gian: 6 tuần.
 
-## Scope đã chốt
-**Phân loại nhị phân mức lát cắt (slice-level)**: lát cắt CT bụng **có tổn thương gan bất thường** vs **gan bình thường** → **gộp lên mức bệnh nhân**. Là *detection/triage proxy*, **KHÔNG** segmentation, **KHÔNG** phân biệt lành/ác, **KHÔNG** thay bác sĩ.
+## Scope đã chốt — NÂNG CẤP: hệ 2 tầng "phát hiện → phân loại" (22/07/2026)
+- **Tầng 1 — PHÁT HIỆN (đã xong, đã kiểm chứng):** phân loại nhị phân mức slice CT (**có tổn thương gan** vs **gan bình thường**) → gộp patient. *Detection/triage proxy.* Đã qua 2 cửa kiểm chứng: Grad-CAM (không shortcut) + external IRCADb (slice-AUROC 0.807). Vẫn giữ nguyên mọi quyết định CT bên dưới.
+- **Tầng 2 — PHÂN LOẠI (đang bắt đầu):** phân loại **loại tổn thương gan (7 lớp lành/ác)** ở mức tổn thương (ROI) trên **LLD-MMRI** (đa thì MRI). Two-stage khép kín trong LLD-MMRI (dataset có bbox) → làm được **oracle-ROI vs predicted-ROI** (đo lan truyền lỗi — đóng góp chính). Nhánh so sánh: joint/multi-task.
+- **Lưu ý modality:** Tầng 1 = CT (LiTS/IRCADb), Tầng 2 = MRI (LLD-MMRI) → là **2 module** (không cascade trên cùng scan). Cascade + oracle-ROI chạy **nội bộ LLD-MMRI**.
+- **RUO**, **KHÔNG** thay bác sĩ.
 
 ## Quyết định đã KHÓA (đừng suy diễn lại — sửa thì cập nhật ở đây + spec sheet)
+**Tầng 1 — Phát hiện (CT):**
 | Hạng mục | Chốt |
 |---|---|
 | Task | Binary classification, slice → patient (mean-of-top-k / Attention-MIL) |
 | Positive/Negative | Positive = có tổn thương (Sensitivity) · Negative = gan bình thường (Specificity) |
 | Train / Internal Val | **LiTS** (patient-level split; val để tuning + chọn best model + khóa threshold) |
-| External Test (Golden) | **3D-IRCADb-01** — chỉ đánh giá generalization, chạm **1 lần** |
+| External Test (Golden) | **3D-IRCADb-01** — chỉ đánh giá generalization, chạm **1 lần** (đã chạy: slice-AUROC 0.807) |
 | KHÔNG dùng | MSD Task03 = LiTS (trùng dữ liệu → không trộn, chỉ là mirror tải) |
 | Baseline | ResNet-50 (ImageNet) — 1 mốc sàn |
 | Main (SOTA-direction) | **ConvNeXt V2** (Nano/Tiny) |
 | So sánh | FastViT/EfficientViT (2023) · Swin V2 (2022, cẩn thận overfit) |
-| Metric quyết định | **patient-level ROC-AUC** (+ PR-AUC); phụ: Sens/Spec/F1/Sens@Spec=0.90/Brier/calibration |
+| Metric quyết định | **slice-level ROC-AUC** (ổn định; patient-level nhiễu vì ít ca âm) + PR-AUC; phụ: Sens/Spec/Sens@Spec=0.90/calibration |
 | Threshold | Khóa trên **validation** (Youden J / Sens-priority), không đụng test |
+
+**Tầng 2 — Phân loại (MRI):**
+| Hạng mục | Chốt |
+|---|---|
+| Task | Phân loại **7 lớp** loại tổn thương (lành/ác) mức ROI/tổn thương |
+| Dataset | **LLD-MMRI** (498 bn, 8 thì MRI, có bbox; split challenge 316/78/104). Mask từ HF `wanglab/LLD-MMRI-MedSAM2` |
+| 7 lớp | HCC · ICC (ung thư đường mật) · di căn · nang gan · u máu (hemangioma) · FNH · áp-xe |
+| Kiến trúc | Two-stage (detect→classify) khép kín trong LLD-MMRI; **nhánh so sánh** joint/multi-task |
+| Thí nghiệm lõi | **oracle-ROI vs predicted-ROI** (đo lan truyền lỗi tầng 1→2) |
+| Metric | Macro-F1 / balanced-accuracy / per-class AUC (đa lớp, mất cân bằng) + CI |
+| Split | **Patient-level** (như tầng 1); dùng split challenge để so benchmark (SDR-Former...) |
 
 ## Conventions BẮT BUỘC (không được vi phạm)
 - **Patient-level split** — không để slice cùng bệnh nhân rơi 2 tập; có unit test leakage (giao tập bệnh nhân = ∅).

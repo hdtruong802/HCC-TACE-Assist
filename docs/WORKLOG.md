@@ -13,6 +13,11 @@
 
 ---
 
+## [2026-07-22 · Claude Code] — QUYẾT ĐỊNH KHÓA: nâng cấp hệ 2 tầng (detect→classify)
+- **Decisions:** Nâng scope thành **2 tầng**. Tầng 1 = phát hiện CT (giữ nguyên, đã kiểm chứng). **Tầng 2 = phân loại 7 lớp lành/ác trên LLD-MMRI** (đa thì MRI, có bbox). Two-stage khép kín trong LLD-MMRI → thí nghiệm **oracle-ROI vs predicted-ROI**; nhánh so sánh joint/multi-task. Lưu ý modality: 2 module (CT + MRI), cascade nội bộ LLD-MMRI. Đã cập nhật `AGENTS.md` (scope + bảng khóa) + `report/T3_W1_Spec_Sheet.md` (§1, §2).
+- **Dataset LLD-MMRI:** 498 bn, 7 lớp (HCC/ICC/di căn/nang/u máu/FNH/áp-xe), split challenge 316/78/104. Lấy: official `LLD-MMRI2023` (đăng ký) + HF `wanglab/LLD-MMRI-MedSAM2` (18.7GB, có mask, snapshot_download).
+- **Next:** Bạn đăng ký challenge + tải HF mirror lên Kaggle → chạy verify cấu trúc → mình viết pipeline ingestion + phân loại (mirror LiTS/IRCADb). CHƯA code ingestion (chờ thấy cấu trúc thật, tránh code mù).
+
 ## [2026-07-22 · Claude Code] — External IRCADb CHẠY XONG + report (gate #2 PASS)
 - **Done:** Chạy external end-to-end trên Kaggle (`sarahelqersh/3dircadb1`). Build: **20 ca (15 u / 5 âm)**, 2,068 slice có gan, pos_ratio 0.269, HU chuẩn [−1024,1023]. Eval ConvNeXt V2 với **threshold khóa từ val** (patient 0.997 / slice 0.203): **slice-AUROC 0.807 [0.678,0.902]** (internal 0.882 → Δ −0.07), slice Sens/Spec @0.20 = 0.74/0.71; patient-AUROC 0.687 [0.38,0.94] (nhiễu). Viết `report/T3_W3_External_IRCADb.md` (bảng internal-vs-external, curves, limitations).
 - **Decisions:** **Gate #2 PASS mức slice** → generalization thật, **không shortcut** (khớp Grad-CAM), orientation OK. Điểm yếu = patient-level nhỏ + **threshold-transfer patient kém** (cần calibrate ngưỡng patient trên tập đủ ca âm) — đúng hạn chế dữ liệu đã biết, không phải lỗi model. → Đủ cơ sở nâng cấp detect+classify hoặc chốt Phase 2.

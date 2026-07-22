@@ -2,15 +2,23 @@
 
 >**Research Use Only (RUO)**, chưa kiểm định lâm sàng.
 
-## 1. Problem Scope
-- **Phân loại nhị phân mức slice** (detection proxy): lát cắt CT bụng **có tổn thương gan bất thường** vs **gan bình thường** → **gộp lên mức bệnh nhân**.
-- Positive = có tổn thương (Sensitivity); Negative = gan bình thường (Specificity). **Không** phân biệt lành/ác; **không** segmentation.
+## 1. Problem Scope — hệ 2 tầng "phát hiện → phân loại" (nâng cấp 22/07/2026)
+- **Tầng 1 — Phát hiện (CT, ĐÃ XONG + kiểm chứng):** phân loại nhị phân mức slice (**có tổn thương** vs **gan bình thường**) → gộp patient. Positive = có tổn thương (Sensitivity); Negative = gan bình thường (Specificity). Đã qua Grad-CAM (gate #1) + external IRCADb (gate #2, slice-AUROC 0.807).
+- **Tầng 2 — Phân loại (MRI, ĐANG BẮT ĐẦU):** phân loại **7 lớp loại tổn thương** (lành/ác) mức ROI trên **LLD-MMRI**. Two-stage khép kín (có bbox) → thí nghiệm **oracle-ROI vs predicted-ROI**; nhánh so sánh joint/multi-task.
+- **Modality:** Tầng 1 = CT, Tầng 2 = MRI → **2 module** (cascade + oracle-ROI chạy nội bộ LLD-MMRI). **Không** segmentation ở tầng 1.
 
 ## 2. Dataset Strategy
+**Tầng 1 — Phát hiện (CT):**
 - **Train set:** LiTS (huấn luyện mô hình).
-- **Internal Validation:** trích từ LiTS (**patient-level split**),  theo dõi train, hyperparameter tuning, **chọn best model nội bộ**, khóa threshold.
-- **External Test (Golden set):** 3D-IRCADb-01, chỉ đánh giá generalization **sau khi đã chốt best model**.
-- **Bắt buộc:** split ở **mức bệnh nhân** + unit test leakage (giao tập bệnh nhân = ∅); CI tính ở mức bệnh nhân.
+- **Internal Validation:** trích từ LiTS (**patient-level split**), theo dõi train, hyperparameter tuning, **chọn best model nội bộ**, khóa threshold.
+- **External Test (Golden set):** 3D-IRCADb-01, chỉ đánh giá generalization **sau khi đã chốt best model** (đã chạm 1 lần).
+
+**Tầng 2 — Phân loại (MRI):**
+- **Dataset:** **LLD-MMRI** — 498 bn, 8 thì MRI, **7 lớp** (HCC/ICC/di căn/nang/u máu/FNH/áp-xe), có **bbox tổn thương**.
+- **Lấy dữ liệu:** official challenge (`LLD-MMRI2023`, cần đăng ký — có nhãn+bbox+split) **+** HF `wanglab/LLD-MMRI-MedSAM2` (18.7GB, có mask, tải `snapshot_download`, không cần đăng ký).
+- **Split:** patient-level; dùng **split challenge 316/78/104** để so benchmark.
+
+- **Bắt buộc (cả 2 tầng):** split ở **mức bệnh nhân** + unit test leakage (giao tập bệnh nhân = ∅); CI ở mức bệnh nhân.
 
 ## 3. Model Selection
 
