@@ -13,6 +13,12 @@
 
 ---
 
+## [2026-07-22 · Claude Code] — External IRCADb CHẠY XONG + report (gate #2 PASS)
+- **Done:** Chạy external end-to-end trên Kaggle (`sarahelqersh/3dircadb1`). Build: **20 ca (15 u / 5 âm)**, 2,068 slice có gan, pos_ratio 0.269, HU chuẩn [−1024,1023]. Eval ConvNeXt V2 với **threshold khóa từ val** (patient 0.997 / slice 0.203): **slice-AUROC 0.807 [0.678,0.902]** (internal 0.882 → Δ −0.07), slice Sens/Spec @0.20 = 0.74/0.71; patient-AUROC 0.687 [0.38,0.94] (nhiễu). Viết `report/T3_W3_External_IRCADb.md` (bảng internal-vs-external, curves, limitations).
+- **Decisions:** **Gate #2 PASS mức slice** → generalization thật, **không shortcut** (khớp Grad-CAM), orientation OK. Điểm yếu = patient-level nhỏ + **threshold-transfer patient kém** (cần calibrate ngưỡng patient trên tập đủ ca âm) — đúng hạn chế dữ liệu đã biết, không phải lỗi model. → Đủ cơ sở nâng cấp detect+classify hoặc chốt Phase 2.
+- **Next:** Bạn tải `eval_out/convnextv2_nano/eval_ircad/*.png` → `image_eval/ircad_convnextv2/`. Rồi chọn hướng: (a) Phase 2 hoàn thiện phát hiện, hoặc (b) dựng tầng phân loại (two-stage).
+- **Files:** report/T3_W3_External_IRCADb.md, docs/WORKLOG.md, report/T3_W1_Spec_Sheet.md
+
 ## [2026-07-22 · Claude Code] — External 3D-IRCADb-01 pipeline (reality-check gate #2)
 - **Done:** Dựng pipeline external validation. `src/data/ircad_ingest.py` (đọc DICOM: PATIENT_DICOM + MASKS_DICOM/{liver,livertumor*} → volume HU + seg 0/1/2 giống LiTS, dò cấu trúc đệ quy, align mask theo InstanceNumber). `scripts/build_ircad.py` (tái dùng NGUYÊN preprocess/label-transfer W1 → `images_u8_ircad.npy` + `manifest_ircad.csv` cùng format LiTS). `src/evaluation/eval_external.py` (suy luận + `full_report` với **threshold KHÓA từ val**). Mở rộng `metrics.full_report(slice_threshold=...)` để external không tự tinh chỉnh ngưỡng. Thêm cell 7–9 vào `notebooks/02_train_kaggle.ipynb` (verify cấu trúc → build → eval + curves). `configs/data/ircad.yaml`, `requirements.txt`+pydicom. Compile OK (chạy trên Kaggle).
 - **Decisions:** Dataset external Kaggle = `sarahelqersh/3dircadb1` (user tìm). Đặt cell external TRONG notebook 02 (cùng session train) để dùng luôn checkpoint — tránh mất khi đổi session. IRCADb có ca ÂM thật → Specificity giờ mới có nghĩa. Chạm **1 LẦN**, không tinh chỉnh.

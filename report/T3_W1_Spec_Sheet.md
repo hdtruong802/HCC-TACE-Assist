@@ -70,5 +70,9 @@ Trong y tế, xác suất mô hình đưa ra phải có ý nghĩa thực tế. (
 > - Đo **$\Delta$ (Domain shift)**: $\Delta$ là độ chênh lệch hiệu năng giữa tập Internal và tập IRCADb. Thuật ngữ này đo lường "Domain shift" (Sự dịch chuyển miền dữ liệu).
 > - Ví dụ: Nếu ROC-AUC nội bộ là 0.95, nhưng sang IRCADb tụt xuống 0.70 ($\Delta = -0.25$), điều này chứng tỏ mô hình đã bị Overfit vào đặc điểm máy chụp của bệnh viện LiTS và thất bại khi gặp máy chụp của bệnh viện khác.
 
+**4.7. Kết quả external (đã chạy 22/07/2026 — chạm 1 lần)** — chi tiết `report/T3_W3_External_IRCADb.md`
+> - ConvNeXt V2 nano trên **3D-IRCADb-01** (20 ca: 15 u / 5 âm, 2,068 slice): **slice-AUROC 0.807 [0.678, 0.902]** (internal 0.882 → **Δ −0.07**). Slice Sens/Spec @thr-khóa 0.20 = 0.74/0.71.
+> - **Gate #2 PASS (mức slice):** generalization thật, không shortcut (khớp Grad-CAM), orientation OK. Điểm yếu = patient-level nhỏ + threshold-transfer patient kém (cần calibrate ngưỡng patient trên tập đủ ca âm).
+
 ---
 **Tiêu chí thành công tổng:** vượt baseline + ổn định qua fold/seed + protocol đúng (no leakage, threshold từ val) + demo chạy + báo cáo trung thực có CI & limitations. *Không đặt mức AUC tuyệt đối tùy tiện.*
