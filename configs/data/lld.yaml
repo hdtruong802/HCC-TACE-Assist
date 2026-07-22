@@ -1,0 +1,31 @@
+# LLD-MMRI (Tầng 2 — phân loại 7 lớp tổn thương gan trên MRI đa thì)
+# Đơn vị: mỗi bệnh nhân = 1 tổn thương = 1 nhãn (num_targets=1 toàn bộ). ROI cắt theo bbox.
+dataset:
+  name: lld-mmri
+  data_root: /kaggle/input/datasets/marcohoang/lld-mmri-dataset/lld
+  annotation: LLD_MMRI_Annotation.json
+  images_dir: images
+  labels_dir: labels
+
+# Hậu tố thì trong TÊN FILE ảnh (json ghi "In Phase"/"Out Phase" có dấu cách → chuẩn hoá bỏ cách).
+phases: ["C-pre", "C+A", "C+V", "C+Delay", "T2WI", "DWI", "InPhase", "OutPhase"]
+
+preprocess:
+  size: 256
+  roi_margin: 0.25        # nới bbox theo tỉ lệ cạnh (mỗi bên)
+  norm: robust            # clip percentile [1,99] → [0,255] (MRI không có đơn vị chuẩn như HU)
+  bbox_transpose: false   # đặt true nếu QC thấy hộp bị lệch trục (x/y hoán)
+
+classes:
+  names: ["Hepatic_hemangioma", "Intrahepatic_cholangiocarcinoma", "Hepatic_abscess",
+          "Hepatic_metastasis", "Hepatic_cyst", "FOCAL_NODULAR_HYPERPLASIA", "Hepatocellular_carcinoma"]
+  malignant: [1, 3, 6]    # còn lại benign {0,2,4,5}
+
+paths:
+  manifest: manifest_lld.csv
+  image_file: images_u8_lld.npy
+
+split:
+  seed: 42
+  k_folds: 5
+  test_frac: 0.15

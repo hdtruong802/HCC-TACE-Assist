@@ -13,6 +13,12 @@
 
 ---
 
+## [2026-07-22 · Claude Code] — Tầng 2 scaffold: LLD-MMRI ingestion + QC
+- **Done:** Verify LLD-MMRI (HF `wanglab/LLD-MMRI-MedSAM2`, lưu Kaggle `marcohoang/lld-mmri-dataset`): **498 bn, mỗi bn 1 tổn thương/1 nhãn/8 thì**; 7 lớp (0 hemangioma…6 HCC), Benign{0,2,4,5}/Malignant{1,3,6} → **266 ác / 232 lành**; bbox `2D_box` per-slice (pixel). Viết `src/data/lld_ingest.py` (đọc annotation + ROI theo bbox, **tự dò trục qua-lát = trục nhỏ nhất** để chống lỗi orientation, robust-u8 cho MRI), `configs/data/lld.yaml`, `scripts/qc_lld.py` (overlay bbox — QC trước build), `scripts/build_lld.py` (cache ROI [N,256,256] + manifest per bn×thì). Compile OK.
+- **Decisions:** ROI-classify per (bệnh nhân × thì); nhãn 7 lớp + cột nhị phân malignant. Chưa chốt fusion đa thì (channel-stack vs late-fusion) — quyết sau QC + baseline.
+- **Next:** Bạn `git pull` → chạy `qc_lld.py` (7 bn đủ lớp) → gửi `qc_lld.png` để mình xác nhận bbox/trục ĐÚNG (nếu lệch → bật `bbox_transpose`). Đúng rồi mới `build_lld.py` → split patient-level + classifier Tầng 2.
+- **Files:** src/data/lld_ingest.py, configs/data/lld.yaml, scripts/{qc_lld,build_lld}.py
+
 ## [2026-07-22 · Claude Code] — QUYẾT ĐỊNH KHÓA: nâng cấp hệ 2 tầng (detect→classify)
 - **Decisions:** Nâng scope thành **2 tầng**. Tầng 1 = phát hiện CT (giữ nguyên, đã kiểm chứng). **Tầng 2 = phân loại 7 lớp lành/ác trên LLD-MMRI** (đa thì MRI, có bbox). Two-stage khép kín trong LLD-MMRI → thí nghiệm **oracle-ROI vs predicted-ROI**; nhánh so sánh joint/multi-task. Lưu ý modality: 2 module (CT + MRI), cascade nội bộ LLD-MMRI. Đã cập nhật `AGENTS.md` (scope + bảng khóa) + `report/T3_W1_Spec_Sheet.md` (§1, §2).
 - **Dataset LLD-MMRI:** 498 bn, 7 lớp (HCC/ICC/di căn/nang/u máu/FNH/áp-xe), split challenge 316/78/104. Lấy: official `LLD-MMRI2023` (đăng ký) + HF `wanglab/LLD-MMRI-MedSAM2` (18.7GB, có mask, snapshot_download).
